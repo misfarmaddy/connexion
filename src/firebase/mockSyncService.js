@@ -27,7 +27,8 @@ const STORAGE_KEYS = {
   BUZZER: "cnx_buzzer_state",
   SCORE_LOG: "cnx_score_log",
   QUESTIONS: "cnx_questions",
-  SUBMISSIONS: "cnx_submissions"
+  SUBMISSIONS: "cnx_submissions",
+  DELETED_TEAM_IDS: "cnx_deleted_team_ids"
 };
 
 // Initial Default State
@@ -272,6 +273,13 @@ export const mockSync = {
           }
         } catch (e) {}
       }
+      // Filter out any tombstoned / deleted teams after bulk catch-up
+      const deletedIds = load(STORAGE_KEYS.DELETED_TEAM_IDS, []);
+      if (deletedIds.length > 0) {
+        const remainingTeams = load(STORAGE_KEYS.TEAMS, []).filter(t => !deletedIds.includes(t.id));
+        save(STORAGE_KEYS.TEAMS, remainingTeams);
+      }
+
       // Notify once after bulk catch-up
       notifyLocal("TEAMS_UPDATED", this.getTeams());
       notifyLocal("ROUND_STATE_UPDATED", this.getRoundState());
@@ -285,9 +293,36 @@ export const mockSync = {
     const { type, payload } = eventData;
     if (!type) return;
 
-    if (type === "TEAM_REGISTERED" || type === "TEAM_UPDATED") {
+    if (type === "TEAM_DELETED") {
+      const teamId = payload?.teamId;
+      if (teamId) {
+        const deleted = load(STORAGE_KEYS.DELETED_TEAM_IDS, []);
+        if (!deleted.includes(teamId)) {
+          deleted.push(teamId);
+          save(STORAGE_KEYS.DELETED_TEAM_IDS, deleted);
+        }
+        const teams = load(STORAGE_KEYS.TEAMS, []).filter(t => t.id !== teamId);
+        save(STORAGE_KEYS.TEAMS, teams);
+        if (shouldNotify) notifyLocal("TEAMS_UPDATED", teams);
+      }
+    } else if (type === "TEAMS_CLEARED") {
+      const currentTeams = load(STORAGE_KEYS.TEAMS, []);
+      const deleted = load(STORAGE_KEYS.DELETED_TEAM_IDS, []);
+      currentTeams.forEach(t => {
+        if (!deleted.includes(t.id)) deleted.push(t.id);
+      });
+      save(STORAGE_KEYS.DELETED_TEAM_IDS, deleted);
+      save(STORAGE_KEYS.TEAMS, []);
+      save(STORAGE_KEYS.SCORE_LOG, []);
+      save(STORAGE_KEYS.SUBMISSIONS, {});
+      if (shouldNotify) {
+        notifyLocal("TEAMS_UPDATED", []);
+        notifyLocal("SCORE_LOG_UPDATED", []);
+      }
+    } else if (type === "TEAM_REGISTERED" || type === "TEAM_UPDATED") {
       const incomingTeam = payload?.team || payload;
-      if (incomingTeam && incomingTeam.id) {
+      const deleted = load(STORAGE_KEYS.DELETED_TEAM_IDS, []);
+      if (incomingTeam && incomingTeam.id && !deleted.includes(incomingTeam.id)) {
         const teams = load(STORAGE_KEYS.TEAMS, []);
         const idx = teams.findIndex(t => t.id === incomingTeam.id || t.teamName.toLowerCase() === (incomingTeam.teamName || "").toLowerCase());
         if (idx >= 0) {
@@ -304,20 +339,28 @@ export const mockSync = {
     } else if (type === "TEAMS_UPDATED") {
       const incomingTeams = payload?.teams || (Array.isArray(payload) ? payload : null);
       if (Array.isArray(incomingTeams)) {
+        const deleted = load(STORAGE_KEYS.DELETED_TEAM_IDS, []);
         const currentTeams = load(STORAGE_KEYS.TEAMS, []);
         const map = new Map();
-        currentTeams.forEach(t => map.set(t.id, t));
+        currentTeams.forEach(t => {
+          if (!deleted.includes(t.id)) map.set(t.id, t);
+        });
         incomingTeams.forEach(t => {
-          if (map.has(t.id)) {
-            map.set(t.id, { ...map.get(t.id), ...t });
-          } else {
-            map.set(t.id, t);
+          if (t && t.id && !deleted.includes(t.id)) {
+            if (map.has(t.id)) {
+              map.set(t.id, { ...map.get(t.id), ...t });
+            } else {
+              map.set(t.id, t);
+            }
           }
         });
         const merged = Array.from(map.values());
         save(STORAGE_KEYS.TEAMS, merged);
         if (shouldNotify) notifyLocal("TEAMS_UPDATED", merged);
       }
+    } else if (type === "SUBMISSIONS_CLEARED") {
+      save(STORAGE_KEYS.SUBMISSIONS, {});
+      if (shouldNotify) notifyLocal("SUBMISSION_RECORDED", { cleared: true });
     } else if (type === "ROUND_STATE_UPDATED") {
       const incomingRound = payload?.roundState || payload;
       if (incomingRound) {
@@ -608,6 +651,67 @@ export const mockSync = {
       return teams[index];
     }
     return null;
+  },
+
+  deleteTeam(teamId) {
+    if (!teamId) return { success: false };
+    const deleted = load(STORAGE_KEYS.DELETED_TEAM_IDS, []);
+    if (!deleted.includes(teamId)) {
+      deleted.push(teamId);
+      save(STORAGE_KEYS.DELETED_TEAM_IDS, deleted);
+    }
+    const teams = this.getTeams().filter(t => t.id !== teamId);
+    save(STORAGE_KEYS.TEAMS, teams);
+
+    // Clean up submissions for this team
+    const allSubs = load(STORAGE_KEYS.SUBMISSIONS, {});
+    let subsChanged = false;
+    Object.keys(allSubs).forEach(qId => {
+      if (Array.isArray(allSubs[qId])) {
+        const filtered = allSubs[qId].filter(s => s.teamId !== teamId);
+        if (filtered.length !== allSubs[qId].length) {
+          allSubs[qId] = filtered;
+          subsChanged = true;
+        }
+      }
+    });
+    if (subsChanged) save(STORAGE_KEYS.SUBMISSIONS, allSubs);
+
+    // Clean up score logs
+    const log = load(STORAGE_KEYS.SCORE_LOG, []).filter(e => e.teamId !== teamId);
+    save(STORAGE_KEYS.SCORE_LOG, log);
+
+    broadcast("TEAM_DELETED", { teamId });
+    broadcast("TEAMS_UPDATED", teams);
+    return { success: true, teams };
+  },
+
+  clearAllTeams() {
+    const teams = this.getTeams();
+    const deleted = load(STORAGE_KEYS.DELETED_TEAM_IDS, []);
+    teams.forEach(t => {
+      if (!deleted.includes(t.id)) deleted.push(t.id);
+    });
+    save(STORAGE_KEYS.DELETED_TEAM_IDS, deleted);
+    save(STORAGE_KEYS.TEAMS, []);
+    save(STORAGE_KEYS.SCORE_LOG, []);
+    save(STORAGE_KEYS.SUBMISSIONS, {});
+
+    broadcast("TEAMS_CLEARED", { timestamp: Date.now() });
+    broadcast("TEAMS_UPDATED", []);
+    return { success: true };
+  },
+
+  clearSubmissions(questionId = null) {
+    if (questionId) {
+      const allSubs = load(STORAGE_KEYS.SUBMISSIONS, {});
+      delete allSubs[questionId];
+      save(STORAGE_KEYS.SUBMISSIONS, allSubs);
+      broadcast("SUBMISSION_RECORDED", { questionId, submission: null, total: 0 });
+    } else {
+      save(STORAGE_KEYS.SUBMISSIONS, {});
+      broadcast("SUBMISSIONS_CLEARED", {});
+    }
   },
 
   // --- SUBMISSIONS (Round 1) ---

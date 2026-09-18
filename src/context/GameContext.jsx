@@ -9,7 +9,10 @@ import {
   submitAnswer as apiSubmitAnswer,
   autoScoreQuestion,
   lockAndComputeTop15 as apiLockTop15,
-  resetGame as apiResetGame
+  resetGame as apiResetGame,
+  deleteTeam as apiDeleteTeam,
+  clearAllTeams as apiClearAllTeams,
+  clearSubmissions as apiClearSubmissions
 } from "../firebase/firestoreService";
 import { 
   subscribeBuzzer, 
@@ -149,6 +152,56 @@ export function GameProvider({ children }) {
     apiResetGame();
   };
 
+  const deleteTeam = (teamId) => {
+    return apiDeleteTeam(teamId);
+  };
+
+  const clearAllTeams = () => {
+    return apiClearAllTeams();
+  };
+
+  const clearSubmissions = (questionId = null) => {
+    return apiClearSubmissions(questionId);
+  };
+
+  const resetRound = (roundNumber = 1) => {
+    if (roundNumber === 1) {
+      const firstQ = round1Questions.find(q => !q.isBackup && !q.isSuddenDeath) || round1Questions[0];
+      apiClearSubmissions();
+      updateRoundState({
+        currentRound: 1,
+        currentQuestionId: firstQ ? firstQ.id : "r1_q01",
+        status: "waiting",
+        questionStartTimestamp: null,
+        duration: 30,
+        suddenDeathActive: false,
+        suddenDeathTeamIds: [],
+        roundCompleted: false
+      });
+    } else if (roundNumber === 2) {
+      const grpPool = round2Questions.filter(q => q.group === roundState.activeGroup);
+      const firstQ = grpPool[0] || round2Questions[0];
+      apiResetBuzzer();
+      updateRoundState({
+        currentRound: 2,
+        currentQuestionId: firstQ ? firstQ.id : "r2_gA_q01",
+        status: "waiting",
+        questionStartTimestamp: null,
+        duration: 20
+      });
+    } else if (roundNumber === 3) {
+      const firstQ = round3Questions[0];
+      apiResetBuzzer();
+      updateRoundState({
+        currentRound: 3,
+        currentQuestionId: firstQ ? firstQ.id : "r3_q01",
+        status: "waiting",
+        questionStartTimestamp: null,
+        duration: 20
+      });
+    }
+  };
+
   const addQuestion = (newQuestion) => {
     const updated = [...questions, newQuestion];
     mockSync.saveQuestions(updated);
@@ -192,6 +245,10 @@ export function GameProvider({ children }) {
         triggerAutoScore,
         lockAndComputeTop15,
         resetGame,
+        deleteTeam,
+        clearAllTeams,
+        resetRound,
+        clearSubmissions,
         addQuestion,
         deleteQuestion,
         updateQuestion

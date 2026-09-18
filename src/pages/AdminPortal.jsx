@@ -43,6 +43,9 @@ export default function AdminPortal() {
     triggerAutoScore,
     lockAndComputeTop15,
     resetGame,
+    deleteTeam,
+    clearAllTeams,
+    resetRound,
     addQuestion,
     deleteQuestion,
     updateQuestion
@@ -267,7 +270,8 @@ export default function AdminPortal() {
     alert(`Auto-Scoring Completed! Correct: ${result.correctCount} | Wrong: ${result.wrongCount} | Total: ${result.total}`);
   };
 
-  const handleNextQuestion = (autoStartTimer = false) => {
+  const handleNextQuestion = (shouldAutoStart = false) => {
+    const autoStartTimer = shouldAutoStart === true;
     if (roundState.currentRound === 1) {
       // Auto-score pending submissions if any exist
       if (currentSubmissions.length > 0 && roundState.status !== "waiting") {
@@ -354,6 +358,28 @@ export default function AdminPortal() {
 
   const handleNextAndStartTimer = () => {
     handleNextQuestion(true);
+  };
+
+  const handleResetRound = () => {
+    const rNum = roundState.currentRound || 1;
+    if (window.confirm(`🔄 RESET ROUND ${rNum}?\n\nThis will return to Question 1 of Round ${rNum}, reset the 30s timer, and clear submissions for this round. Continue?`)) {
+      resetRound(rNum);
+      playTick();
+    }
+  };
+
+  const handleDeleteTeam = (teamId, teamName) => {
+    if (window.confirm(`🗑️ Delete team "${teamName}"?\n\nThis team and their submissions will be permanently removed. Continue?`)) {
+      deleteTeam(teamId);
+      playWrong();
+    }
+  };
+
+  const handleClearAllTeams = () => {
+    if (window.confirm(`⚠️ CLEAR ALL REGISTERED TEAMS (${teams.length})?\n\nThis will permanently delete all test, sample, and registered teams, along with all team scores and submissions.\n\nAre you sure you want to proceed?`)) {
+      clearAllTeams();
+      playWrong();
+    }
   };
 
   const handleLockTop15 = () => {
@@ -769,6 +795,14 @@ export default function AdminPortal() {
                           <span>Next (Prepare)</span>
                           <ArrowRight className="w-4 h-4" />
                         </button>
+                        <button
+                          onClick={handleResetRound}
+                          className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm cursor-pointer"
+                          title="Reset Round 1 back to Question 1"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Reset Round</span>
+                        </button>
                       </div>
                     </div>
                   )}
@@ -792,6 +826,14 @@ export default function AdminPortal() {
                     <button onClick={() => handleNextQuestion(false)} className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md shadow-purple-600/20 cursor-pointer">
                       <span>Next (Prepare)</span>
                       <ArrowRight className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={handleResetRound}
+                      className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer transition-all active:scale-95"
+                      title="Reset Round 1 back to Question 1 and clear round submissions"
+                    >
+                      <RotateCcw className="w-4 h-4 text-amber-400" />
+                      <span>Reset Round 1</span>
                     </button>
                   </div>
                 </div>
@@ -904,9 +946,13 @@ export default function AdminPortal() {
                   <button onClick={resetBuzzer} className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer">
                     Reset Buzzer
                   </button>
-                  <button onClick={handleNextQuestion} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
+                  <button onClick={() => handleNextQuestion(false)} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
                     <span>Next Question</span>
                     <ArrowRight className="w-4 h-4" />
+                  </button>
+                  <button onClick={handleResetRound} className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md cursor-pointer">
+                    <RotateCcw className="w-4 h-4 text-amber-400" />
+                    <span>Reset Round 2</span>
                   </button>
                 </div>
 
@@ -936,7 +982,7 @@ export default function AdminPortal() {
                     <h3 className="text-lg font-black text-slate-900 dark:text-white">Round 3: Grand Finale Championship</h3>
                     <p className="text-xs text-slate-500">20 Championship Questions (10 Core + 10 Backup) • Top 3 Finalists</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <button onClick={() => handleArmBuzzer("ALL")} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md cursor-pointer">
                       <Zap className="w-4 h-4 fill-current" />
                       <span>Arm Finals Buzzer</span>
@@ -944,9 +990,13 @@ export default function AdminPortal() {
                     <button onClick={resetBuzzer} className="px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs cursor-pointer">
                       Reset
                     </button>
-                    <button onClick={handleNextQuestion} className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md cursor-pointer">
+                    <button onClick={() => handleNextQuestion(false)} className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md cursor-pointer">
                       <span>Next Question</span>
                       <ArrowRight className="w-4 h-4" />
+                    </button>
+                    <button onClick={handleResetRound} className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md cursor-pointer">
+                      <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Reset Finals</span>
                     </button>
                   </div>
                 </div>
@@ -1062,9 +1112,21 @@ export default function AdminPortal() {
         {/* 4. TEAMS ROSTER SECTION */}
         {adminSection === "teams" && (
           <div className="bg-white/95 dark:bg-slate-900/95 rounded-2xl border-2 border-purple-200 dark:border-purple-800 p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-black text-slate-900 dark:text-white">Registered Teams ({teams.length})</h3>
-              <span className="text-xs text-slate-500 font-semibold">Ranked by Score then Avg Speed</span>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white">Registered Teams ({teams.length})</h3>
+                <span className="text-xs text-slate-500 font-semibold">Ranked by Score then Avg Speed</span>
+              </div>
+              {teams.length > 0 && (
+                <button
+                  onClick={handleClearAllTeams}
+                  className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
+                  title="Permanently remove all sample and registered test teams"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Clear All Test Teams ({teams.length})</span>
+                </button>
+              )}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -1078,6 +1140,7 @@ export default function AdminPortal() {
                     <th className="p-3">Score</th>
                     <th className="p-3">Avg Speed</th>
                     <th className="p-3">Status</th>
+                    <th className="p-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium text-slate-800 dark:text-slate-200">
@@ -1112,6 +1175,15 @@ export default function AdminPortal() {
                         ) : (
                           <span className="text-slate-500 font-medium">Round 1</span>
                         )}
+                      </td>
+                      <td className="p-3 text-right">
+                        <button
+                          onClick={() => handleDeleteTeam(t.id, t.teamName)}
+                          className="p-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 transition-all active:scale-95 cursor-pointer"
+                          title={`Delete team "${t.teamName}"`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   ))}

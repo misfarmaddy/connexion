@@ -183,6 +183,10 @@ export function autoScoreQuestion(question, submissions = []) {
       // Update team stats
       team.totalResponseTime = (Number(team.totalResponseTime) || 0) + answeredTime;
       team.answerCount = (Number(team.answerCount) || 0) + 1;
+      mockSync.updateTeam(team.id, {
+        totalResponseTime: team.totalResponseTime,
+        answerCount: team.answerCount
+      });
     } else {
       wrongCount++;
       mockSync.logScore({
@@ -196,8 +200,6 @@ export function autoScoreQuestion(question, submissions = []) {
     }
   });
 
-  // Save updated team statistics
-  mockSync.save(STORAGE_KEYS ? "cnx_teams" : "teams", teams);
   return { correctCount, wrongCount, total: submissions.length };
 }
 
@@ -214,6 +216,20 @@ export function subscribeScoreLog(callback) {
 
 export function recordScoreLog(entry) {
   return mockSync.logScore(entry);
+}
+
+// ================= TEAM MANAGEMENT =================
+
+export function deleteTeam(teamId) {
+  return mockSync.deleteTeam(teamId);
+}
+
+export function clearAllTeams() {
+  return mockSync.clearAllTeams();
+}
+
+export function clearSubmissions(questionId = null) {
+  return mockSync.clearSubmissions(questionId);
 }
 
 // ================= ADVANCEMENT & RESET =================

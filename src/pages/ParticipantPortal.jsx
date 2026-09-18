@@ -680,7 +680,7 @@ export default function ParticipantPortal() {
           <div className="p-5 sm:p-6 rounded-3xl bg-white/95 dark:bg-slate-900/95 border-2 border-purple-200 dark:border-purple-800/80 shadow-sm">
             {roundState.status === "waiting" ? (
               /* STATE 0: WAITING FOR QUIZ MASTER TO START 30s TIMER */
-              <div className="p-5 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700/60 text-center space-y-2">
+              <div className="p-5 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700/60 text-center space-y-3">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-900 dark:text-amber-200 text-xs font-black">
                   <Clock className="w-3.5 h-3.5 animate-spin text-amber-700 dark:text-amber-400" />
                   <span>Question {currentQuestionNumber} Ready &bull; Standby for Countdown</span>
@@ -689,8 +689,23 @@ export default function ParticipantPortal() {
                   Analyze the 4 Clues With Your Team!
                 </h4>
                 <p className="text-xs text-slate-600 dark:text-slate-300 font-medium max-w-md mx-auto">
-                  The 30-second answer timer will start when the Quiz Master activates the question. Get your connection ready!
+                  The 30-second answer countdown will begin when the Quiz Master starts the question. You can pre-type your connection answer below!
                 </p>
+
+                {/* Pre-type answer input box */}
+                <div className="max-w-md mx-auto pt-1">
+                  <input
+                    type="text"
+                    placeholder="Pre-type your connection answer here..."
+                    value={typedAnswer}
+                    onChange={(e) => setTypedAnswer(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-slate-800 border-2 border-amber-300 dark:border-amber-700 text-sm sm:text-base text-slate-900 dark:text-white placeholder:text-slate-400 font-bold focus:outline-none focus:border-amber-500 text-center shadow-inner"
+                  />
+                  <p className="text-[11px] text-amber-800 dark:text-amber-300 mt-1.5 font-semibold flex items-center justify-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                    <span>When Quiz Master starts the timer, your answer will be ready to lock in instantly for max speed bonus!</span>
+                  </p>
+                </div>
               </div>
             ) : roundState.status === "revealed" ? (
               /* STATE 1: ANSWER REVEALED BY QUIZ MASTER (GREEN IF CORRECT, RED IF WRONG) */

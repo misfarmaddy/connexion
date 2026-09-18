@@ -3,7 +3,8 @@ import React, { useState, useEffect } from "react";
 import { 
   Users, Send, Award, Clock, AlertCircle, CheckCircle2, 
   Sparkles, Zap, ShieldAlert, LogOut, ArrowRight, Trophy, X,
-  GraduationCap, UserCheck, Phone, Mail, Link2, KeyRound, Copy, Check, Crown
+  GraduationCap, UserCheck, Phone, Mail, Link2, KeyRound, Copy, Check, Crown,
+  Lock, Edit3
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useGame } from "../context/GameContext";
@@ -51,11 +52,13 @@ export default function ParticipantPortal() {
   const [copiedCode, setCopiedCode] = useState(false);
   const [typedAnswer, setTypedAnswer] = useState("");
   const [submittedAnswer, setSubmittedAnswer] = useState(null);
+  const [isAnswerLocked, setIsAnswerLocked] = useState(false);
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
 
   useEffect(() => {
     setTypedAnswer("");
     setSubmittedAnswer(null);
+    setIsAnswerLocked(false);
   }, [roundState.currentQuestionId]);
 
   // Handle Team Leader Registration
@@ -127,17 +130,28 @@ export default function ParticipantPortal() {
     playTick();
   };
 
-  const handleAnswerSubmit = (chosenAnswer) => {
-    const answerToLock = chosenAnswer || typedAnswer;
-    if (!answerToLock.trim() || submittedAnswer || timeRemaining <= 0) return;
-    submitAnswer(activeQuestion?.id, currentTeam.id, answerToLock);
+  const handleLockAnswer = (chosenAnswer) => {
+    const answerToLock = (chosenAnswer || typedAnswer || "").trim();
+    if (!answerToLock || timeRemaining <= 0) return;
+    
+    // Lock with current timeRemaining for exact speed bonus
+    submitAnswer(activeQuestion?.id, currentTeam.id, answerToLock, timeRemaining);
     setSubmittedAnswer({ answer: answerToLock, timeRemaining });
+    setTypedAnswer(answerToLock);
+    setIsAnswerLocked(true);
     playTick();
   };
 
+  const handleModifyAnswer = () => {
+    if (timeRemaining <= 0 || roundState.status !== "live") return;
+    setIsAnswerLocked(false);
+  };
+
   useEffect(() => {
-    if (roundState.status === "live" && timeRemaining <= 0 && typedAnswer.trim() && !submittedAnswer) {
-      handleAnswerSubmit(typedAnswer);
+    if (roundState.status === "live" && timeRemaining <= 0) {
+      if (typedAnswer.trim() && (!submittedAnswer || !isAnswerLocked)) {
+        handleLockAnswer(typedAnswer);
+      }
     }
   }, [timeRemaining, roundState.status]);
 
@@ -660,63 +674,134 @@ export default function ParticipantPortal() {
 
               {/* Submission Box */}
               <div className="p-5 sm:p-6 rounded-3xl bg-white/95 border-2 border-purple-200 shadow-sm">
-                {submittedAnswer ? (
-                  <div className="text-center py-4 space-y-2 animate-in zoom-in-95">
-                    <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center border-2 border-emerald-300">
-                      <CheckCircle2 className="w-6 h-6" />
+                {isAnswerLocked && submittedAnswer ? (
+                  /* STATE 1: ANSWER IS CURRENTLY LOCKED */
+                  <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/90 border-2 border-emerald-300 shadow-sm space-y-3 animate-in zoom-in-95">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-emerald-600/30">
+                          <CheckCircle2 className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-black uppercase tracking-wider text-emerald-900">
+                              Answer Locked In!
+                            </span>
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-black bg-emerald-200 text-emerald-950 border border-emerald-300 flex items-center gap-1">
+                              <Zap className="w-3 h-3 text-amber-600 fill-amber-500" />
+                              <span>{submittedAnswer.timeRemaining.toFixed(1)}s Speed Bonus Secured</span>
+                            </span>
+                          </div>
+                          <p className="text-base font-black text-slate-900 mt-1">
+                            "{submittedAnswer.answer}"
+                          </p>
+                        </div>
+                      </div>
+
+                      {roundState.status === "live" && timeRemaining > 0 && (
+                        <button
+                          onClick={handleModifyAnswer}
+                          className="px-4 py-2.5 rounded-xl bg-white hover:bg-emerald-100 border-2 border-emerald-400 text-emerald-800 text-xs font-black flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
+                        >
+                          <Edit3 className="w-4 h-4 text-emerald-700" />
+                          <span>Modify Answer ({timeRemaining.toFixed(0)}s left)</span>
+                        </button>
+                      )}
                     </div>
-                    <h4 className="text-base font-black text-emerald-800">
-                      Answer Locked In!
-                    </h4>
-                    <p className="text-xs text-slate-700">
-                      You submitted: <strong className="text-slate-900 font-bold">"{submittedAnswer.answer}"</strong> with {submittedAnswer.timeRemaining.toFixed(1)}s remaining.
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      Standby for Quiz Master to reveal the connection solution...
+
+                    <p className="text-[11px] text-slate-500 border-t border-emerald-200/60 pt-2">
+                      {roundState.status === "live" && timeRemaining > 0
+                        ? "Your speed bonus is currently locked. If you wish to change your answer before the 30 seconds run out, click 'Modify Answer' above."
+                        : "Question time has ended. Waiting for Quiz Master to reveal the connection solution..."}
                     </p>
                   </div>
                 ) : roundState.status === "live" && timeRemaining > 0 ? (
-                  <div>
+                  /* STATE 2: ANSWERING / MODIFYING (TIMER STILL RUNNING) */
+                  <div className="space-y-3">
+                    {submittedAnswer && (
+                      <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                          <span>
+                            Modifying your answer. Previous locked time was <strong>{submittedAnswer.timeRemaining.toFixed(1)}s</strong>. Click <strong>"LOCK ANSWER"</strong> when ready to secure your updated speed bonus!
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => setIsAnswerLocked(true)}
+                          className="text-[11px] font-black text-amber-800 hover:underline flex-shrink-0 cursor-pointer"
+                        >
+                          Cancel &amp; Keep Previous
+                        </button>
+                      </div>
+                    )}
+
                     {activeQuestion.type === "mcq" ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {activeQuestion.options?.map((opt, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => handleAnswerSubmit(opt)}
-                            className="p-4 rounded-2xl text-left font-black text-sm bg-slate-50 border-2 border-purple-200 hover:border-purple-600 hover:bg-purple-50 text-slate-800 transition-all active:scale-[0.98] shadow-sm"
-                          >
-                            <span className="inline-block w-6 text-purple-700 font-mono">
-                              {String.fromCharCode(65 + idx)}.
-                            </span>
-                            {opt}
-                          </button>
-                        ))}
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {activeQuestion.options?.map((opt, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setTypedAnswer(opt)}
+                              className={`p-4 rounded-2xl text-left font-black text-sm transition-all active:scale-[0.98] shadow-sm flex items-center justify-between ${
+                                typedAnswer === opt 
+                                  ? "bg-purple-100 border-2 border-purple-600 text-purple-950 shadow-purple-500/10" 
+                                  : "bg-slate-50 border-2 border-purple-200 hover:border-purple-400 text-slate-800"
+                              }`}
+                            >
+                              <div>
+                                <span className="inline-block w-6 text-purple-700 font-mono">
+                                  {String.fromCharCode(65 + idx)}.
+                                </span>
+                                <span>{opt}</span>
+                              </div>
+                              {typedAnswer === opt && <Check className="w-4 h-4 text-purple-700" />}
+                            </button>
+                          ))}
+                        </div>
+
+                        <button
+                          onClick={() => handleLockAnswer(typedAnswer)}
+                          disabled={!typedAnswer.trim()}
+                          className="w-full py-3.5 px-6 rounded-2xl font-black text-sm uppercase tracking-wider bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-95 text-white disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 cursor-pointer"
+                        >
+                          <Lock className="w-4 h-4" />
+                          <span>LOCK ANSWER (Save {timeRemaining.toFixed(1)}s Time Bonus)</span>
+                        </button>
                       </div>
                     ) : (
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          autoFocus
-                          placeholder="Type your connection answer here..."
-                          value={typedAnswer}
-                          onChange={(e) => setTypedAnswer(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleAnswerSubmit(typedAnswer)}
-                          className="flex-1 px-4 py-3 rounded-2xl bg-slate-50 border-2 border-purple-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-purple-600 font-bold"
-                        />
-                        <button
-                          onClick={() => handleAnswerSubmit(typedAnswer)}
-                          disabled={!typedAnswer.trim()}
-                          className="px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider bg-gradient-to-r from-purple-600 to-pink-600 text-white disabled:opacity-50 hover:opacity-90 flex items-center gap-2 shadow-md shadow-purple-500/20"
-                        >
-                          <span>Lock In</span>
-                          <Send className="w-4 h-4" />
-                        </button>
+                      <div className="space-y-3">
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <input
+                            type="text"
+                            autoFocus
+                            placeholder="Type your connection answer here..."
+                            value={typedAnswer}
+                            onChange={(e) => setTypedAnswer(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleLockAnswer(typedAnswer)}
+                            className="flex-1 px-4 py-3.5 rounded-2xl bg-slate-50 border-2 border-purple-200 text-base sm:text-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-purple-600 font-bold"
+                          />
+                          <button
+                            onClick={() => handleLockAnswer(typedAnswer)}
+                            disabled={!typedAnswer.trim()}
+                            className="px-6 py-3.5 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-95 text-white disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 transition-all cursor-pointer whitespace-nowrap"
+                          >
+                            <Lock className="w-4 h-4" />
+                            <span>LOCK ANSWER (+{timeRemaining.toFixed(1)}s Bonus)</span>
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-slate-500 flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-purple-600" />
+                          <span>Speed bonus points are awarded based on the exact second you click <strong>"LOCK ANSWER"</strong>. You can modify before the 30s timer ends.</span>
+                        </p>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="text-center py-4 text-xs font-semibold text-slate-500">
-                    Question locked or ended. Please wait for answer reveal.
+                  /* STATE 3: TIME EXPIRED OR WAITING */
+                  <div className="text-center py-5 text-xs font-bold text-slate-500">
+                    {submittedAnswer 
+                      ? `Answer Locked: "${submittedAnswer.answer}" (${submittedAnswer.timeRemaining.toFixed(1)}s remaining). Waiting for solution reveal.` 
+                      : "Time's up! No answer was locked for this question."}
                   </div>
                 )}
 

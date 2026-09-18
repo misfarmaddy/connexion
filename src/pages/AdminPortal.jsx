@@ -267,6 +267,73 @@ export default function AdminPortal() {
     alert(`Auto-Scoring Completed! Correct: ${result.correctCount} | Wrong: ${result.wrongCount} | Total: ${result.total}`);
   };
 
+  const handleNextQuestion = () => {
+    if (roundState.currentRound === 1) {
+      // Auto-score pending submissions if any exist
+      if (currentSubmissions.length > 0 && roundState.status !== "waiting") {
+        try { triggerAutoScore(roundState.currentQuestionId); } catch(e) {}
+      }
+
+      const coreQuestions = round1Questions.filter(q => !q.isBackup && !q.isSuddenDeath);
+      const curIdx = coreQuestions.findIndex(q => q.id === roundState.currentQuestionId);
+
+      let nextQ = null;
+      if (curIdx >= 0 && curIdx < coreQuestions.length - 1) {
+        nextQ = coreQuestions[curIdx + 1];
+      } else {
+        const fullList = round1Questions.filter(q => !q.isSuddenDeath);
+        const fullIdx = fullList.findIndex(q => q.id === roundState.currentQuestionId);
+        if (fullIdx >= 0 && fullIdx < fullList.length - 1) {
+          nextQ = fullList[fullIdx + 1];
+        }
+      }
+
+      if (nextQ) {
+        updateRoundState({
+          currentRound: 1,
+          currentQuestionId: nextQ.id,
+          status: "waiting",
+          duration: 30,
+          questionStartTimestamp: null
+        });
+        playTick();
+      } else {
+        alert("🎉 You have reached the end of Round 1 Core Questions (10/10)! You can now Compute Top 15 Qualifiers or select a backup question.");
+      }
+    } else if (roundState.currentRound === 2) {
+      const grpPool = round2Questions.filter(q => q.group === roundState.activeGroup);
+      const curIdx = grpPool.findIndex(q => q.id === roundState.currentQuestionId);
+      if (curIdx >= 0 && curIdx < grpPool.length - 1) {
+        const nextQ = grpPool[curIdx + 1];
+        updateRoundState({
+          currentQuestionId: nextQ.id,
+          status: "waiting",
+          duration: 20,
+          questionStartTimestamp: null
+        });
+        resetBuzzer();
+        playTick();
+      } else {
+        alert(`Finished all 10 questions for Group ${roundState.activeGroup}! Switch to the next group.`);
+      }
+    } else if (roundState.currentRound === 3) {
+      const curIdx = round3Questions.findIndex(q => q.id === roundState.currentQuestionId);
+      if (curIdx >= 0 && curIdx < round3Questions.length - 1) {
+        const nextQ = round3Questions[curIdx + 1];
+        updateRoundState({
+          currentQuestionId: nextQ.id,
+          status: "waiting",
+          duration: 20,
+          questionStartTimestamp: null
+        });
+        resetBuzzer();
+        playTick();
+      } else {
+        alert("Grand Finals questions completed!");
+      }
+    }
+  };
+
   const handleLockTop15 = () => {
     const res = lockAndComputeTop15();
     if (res.hasTie) {
@@ -409,9 +476,14 @@ export default function AdminPortal() {
     return matchRound && matchSearch;
   });
 
+  const currentR1Core = round1Questions.filter(q => !q.isBackup && !q.isSuddenDeath);
+  const currentR1Idx = currentR1Core.findIndex(q => q.id === roundState.currentQuestionId);
+  const nextR1QNum = currentR1Idx >= 0 && currentR1Idx < currentR1Core.length - 1 ? currentR1Idx + 2 : null;
+  const currentR1QNum = currentR1Idx >= 0 ? currentR1Idx + 1 : null;
+
   return (
     <div className="relative min-h-screen">
-      <BackgroundCanvas variant="admin" />
+      <BackgroundCanvas variant="admin" showFloaters={false} />
 
       {/* Admin Credentials & Multi-Admin Modal */}
       <AdminManagementModal 
@@ -631,18 +703,60 @@ export default function AdminPortal() {
                     <p className="text-xs text-emerald-700 dark:text-emerald-400 font-bold">Answer: {activeQuestion?.correctAnswer}</p>
                   </div>
 
+                  {/* Post-30s Question Concluded Banner with Quick Next Question Action */}
+                  {(timeRemaining <= 0 || roundState.status === "locked" || roundState.status === "revealed") && roundState.status !== "waiting" && (
+                    <div className="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/50 border-2 border-amber-300 dark:border-amber-700 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-md animate-in fade-in">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-md">
+                          <CheckCircle className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-black uppercase tracking-wider text-amber-900 dark:text-amber-200 block">
+                            30-Second Time's Up &bull; Question Concluded
+                          </span>
+                          <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">
+                            Submissions ({currentSubmissions.length}) collected. Ready to auto-score, reveal solution, or proceed directly to Next Question.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {roundState.status !== "revealed" && (
+                          <button
+                            onClick={handleRevealAnswer}
+                            className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Reveal Answer</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={handleNextQuestion}
+                          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-purple-500/25 ring-2 ring-amber-400 dark:ring-amber-500 cursor-pointer"
+                        >
+                          <span>Next Question {nextR1QNum ? `(Q${nextR1QNum}/10)` : ""}</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap gap-2.5 pt-2">
-                    <button onClick={handleStartTimer} className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md">
+                    <button onClick={handleStartTimer} className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
                       <Play className="w-4 h-4 fill-current" /> Start 30s Timer
                     </button>
-                    <button onClick={handleForceEnd} className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md">
+                    <button onClick={handleForceEnd} className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
                       <Square className="w-4 h-4 fill-current" /> Force End &amp; Lock
                     </button>
-                    <button onClick={handleRevealAnswer} className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md">
+                    <button onClick={handleRevealAnswer} className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
                       <Eye className="w-4 h-4" /> Reveal Answer
                     </button>
-                    <button onClick={handleAutoScore} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md">
+                    <button onClick={handleAutoScore} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
                       <Zap className="w-4 h-4 fill-current text-yellow-200" /> Auto-Score Submissions ({currentSubmissions.length})
+                    </button>
+                    <button onClick={handleNextQuestion} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md shadow-purple-600/20 cursor-pointer">
+                      <span>Next Question {nextR1QNum ? `(Q${nextR1QNum}/10)` : ""}</span>
+                      <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -749,12 +863,15 @@ export default function AdminPortal() {
                 </div>
 
                 <div className="flex gap-2 flex-wrap">
-                  <button onClick={() => handleArmBuzzer(roundState.activeGroup)} className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md">
-                    <Zap className="w-4 h-4 fill-current" />
-                    <span>Arm Buzzer (Group {roundState.activeGroup})</span>
+                  <button onClick={() => handleArmBuzzer(roundState.activeGroup)} className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
+                    <Zap className="w-4 h-4 fill-current" /> Arm Group {roundState.activeGroup} Buzzer
                   </button>
-                  <button onClick={resetBuzzer} className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs">
+                  <button onClick={resetBuzzer} className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer">
                     Reset Buzzer
+                  </button>
+                  <button onClick={handleNextQuestion} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
+                    <span>Next Question</span>
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
 
@@ -785,12 +902,16 @@ export default function AdminPortal() {
                     <p className="text-xs text-slate-500">20 Championship Questions (10 Core + 10 Backup) • Top 3 Finalists</p>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => handleArmBuzzer("ALL")} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md">
+                    <button onClick={() => handleArmBuzzer("ALL")} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md cursor-pointer">
                       <Zap className="w-4 h-4 fill-current" />
                       <span>Arm Finals Buzzer</span>
                     </button>
-                    <button onClick={resetBuzzer} className="px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs">
+                    <button onClick={resetBuzzer} className="px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs cursor-pointer">
                       Reset
+                    </button>
+                    <button onClick={handleNextQuestion} className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md cursor-pointer">
+                      <span>Next Question</span>
+                      <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>

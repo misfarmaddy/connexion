@@ -6,8 +6,30 @@ import ImageClueCard from "../components/ImageClueCard";
 import TimerBar from "../components/TimerBar";
 
 export default function DisplayPortal() {
-  const { roundState, buzzerState, activeQuestion, timeRemaining, teams } = useGame();
+  const { 
+    roundState, 
+    buzzerState, 
+    activeQuestion, 
+    timeRemaining, 
+    teams,
+    round1Questions,
+    round2Questions,
+    round3Questions
+  } = useGame();
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Compute clean sequential question number (never leaks question ID or answer)
+  const currentQuestionNumber = React.useMemo(() => {
+    if (!activeQuestion) return 1;
+    if (activeQuestion.isSuddenDeath) return "Tiebreaker";
+    const roundList = roundState.currentRound === 1 
+      ? (round1Questions || []) 
+      : roundState.currentRound === 2 
+        ? (round2Questions || []) 
+        : (round3Questions || []);
+    const idx = roundList.findIndex(q => q.id === activeQuestion.id);
+    return idx >= 0 ? idx + 1 : 1;
+  }, [activeQuestion, roundState.currentRound, round1Questions, round2Questions, round3Questions]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -64,7 +86,7 @@ export default function DisplayPortal() {
             {/* Question Banner */}
             <div className="p-6 sm:p-8 rounded-3xl bg-white/95 border-2 border-purple-200 text-center shadow-xl backdrop-blur-md">
               <span className="text-xs font-mono font-black uppercase tracking-wider text-purple-700 block mb-1">
-                {activeQuestion.id} ? {activeQuestion.type === "mcq" ? "Multiple Choice" : "Connection Challenge"}
+                Question {currentQuestionNumber} &bull; {activeQuestion.type === "mcq" ? "Multiple Choice" : "Connection Challenge"}
               </span>
               <h2 className="text-2xl sm:text-4xl font-black text-slate-900 leading-snug">
                 {activeQuestion.prompt}
@@ -81,6 +103,7 @@ export default function DisplayPortal() {
                     index={idx}
                     totalClues={activeQuestion.clues.length}
                     isLarge={true}
+                    showLabel={false}
                   />
                 ))}
               </div>
@@ -153,6 +176,7 @@ export default function DisplayPortal() {
                     index={idx}
                     totalClues={activeQuestion.clues.length}
                     isLarge={false}
+                    showLabel={false}
                   />
                 ))}
               </div>

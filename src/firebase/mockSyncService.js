@@ -34,7 +34,7 @@ const STORAGE_KEYS = {
 const DEFAULT_ROUND_STATE = {
   currentRound: 1, // 1, 2, 3
   activeGroup: "A", // For Round 2: "A", "B", "C"
-  currentQuestionId: "r1_q01_leo",
+  currentQuestionId: "r1_q01",
   status: "waiting", // "waiting", "live", "locked", "revealed", "completed"
   questionStartTimestamp: null,
   duration: 30, // seconds
@@ -216,13 +216,12 @@ function initCloudSync() {
 // Ensure Initial Seed & Auto-Upgrade to Tamil Connection Bank
 export function initializeStorage() {
   const existingQuestions = load(STORAGE_KEYS.QUESTIONS, null);
-  // Auto-upgrade if empty, outdated, or fewer than 70 questions (new full Tamil 72-question bank)
-  if (!existingQuestions || !Array.isArray(existingQuestions) || existingQuestions.length < 70 || !existingQuestions.some(q => q.id === "r1_q01_leo" || q.tamilCategory)) {
+  // Auto-upgrade if empty, outdated, or fewer than 70 questions or if still using old spoiler IDs like r1_q01_leo
+  if (!existingQuestions || !Array.isArray(existingQuestions) || existingQuestions.length < 70 || !existingQuestions.some(q => q.id === "r1_q01")) {
     save(STORAGE_KEYS.QUESTIONS, INITIAL_QUESTIONS);
-    // If active question was an old one, update round state to point to Leo
     const curRound = load(STORAGE_KEYS.ROUND_STATE, DEFAULT_ROUND_STATE);
-    if (!curRound.currentQuestionId || curRound.currentQuestionId === "r1_q01") {
-      save(STORAGE_KEYS.ROUND_STATE, { ...curRound, currentQuestionId: "r1_q01_leo" });
+    if (!curRound.currentQuestionId || curRound.currentQuestionId.includes("_leo") || curRound.currentQuestionId === "r1_q01_leo") {
+      save(STORAGE_KEYS.ROUND_STATE, { ...curRound, currentQuestionId: "r1_q01" });
     }
   }
   if (!localStorage.getItem(STORAGE_KEYS.ROUND_STATE)) {
@@ -511,7 +510,7 @@ export const mockSync = {
     // 1. Immediately pull fresh cloud data in case another device registered
     await this.pullFromCloud();
 
-    const teams = this.getTeams();
+    let teams = this.getTeams();
     const cleanInputName = (registeredName || "").trim();
     const cleanInputCode = (teamCode || "").trim();
 
@@ -522,8 +521,24 @@ export const mockSync = {
       return { success: false, message: "Please enter your Registered Name." };
     }
 
-    // Match team by normalized code
-    const matchedTeam = teams.find(t => isCodeMatch(cleanInputCode, t.teamCode));
+    // Helper to find team by code or team name
+    const findMatchingTeam = (teamList) => {
+      return teamList.find(t => 
+        isCodeMatch(cleanInputCode, t.teamCode) || 
+        (t.teamName && t.teamName.trim().toLowerCase() === cleanInputCode.toLowerCase()) ||
+        isCodeMatch(cleanInputName, t.teamCode) ||
+        (t.teamName && t.teamName.trim().toLowerCase() === cleanInputName.toLowerCase())
+      );
+    };
+
+    let matchedTeam = findMatchingTeam(teams);
+
+    // If not found in current memory, try a second forced pull from cloud
+    if (!matchedTeam) {
+      await this.pullFromCloud();
+      teams = this.getTeams();
+      matchedTeam = findMatchingTeam(teams);
+    }
 
     if (!matchedTeam) {
       return { 
@@ -532,7 +547,7 @@ export const mockSync = {
       };
     }
 
-    // Team code is valid! Now verify name
+    // Team code is valid! Now verify or enroll name
     const lowerInputName = cleanInputName.toLowerCase();
     const currentMembers = Array.isArray(matchedTeam.members) ? [...matchedTeam.members] : [];
 
@@ -558,7 +573,6 @@ export const mockSync = {
       };
     }
 
-    // Not in existing members list, but valid team code!
     // If team has fewer than 3 members, auto-enroll this teammate!
     if (currentMembers.length < 3) {
       currentMembers.push(cleanInputName);
@@ -571,10 +585,16 @@ export const mockSync = {
       };
     }
 
-    // Team is already full (3 members) and name did not match
+    // If team is full with 3 members, allow this teammate device to connect
+    if (!matchedTeam.connectedMembers) matchedTeam.connectedMembers = [];
+    if (!matchedTeam.connectedMembers.includes(cleanInputName)) {
+      matchedTeam.connectedMembers.push(cleanInputName);
+      this.updateTeam(matchedTeam.id, { connectedMembers: matchedTeam.connectedMembers });
+    }
     return {
-      success: false,
-      message: `Team "${matchedTeam.teamName}" is already full with 3 members (${currentMembers.join(", ")}). Please enter one of the registered member names.`
+      success: true,
+      team: matchedTeam,
+      message: `Connected to team ${matchedTeam.teamName} as ${cleanInputName}!`
     };
   },
 

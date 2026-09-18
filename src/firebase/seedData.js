@@ -12,7 +12,7 @@ export const INITIAL_QUESTIONS = [
   // 30s Server Countdown • First to Lock Correct Answer gets Speed Bonus
   // =========================================================================
   {
-    id: "r1_q01_leo",
+    id: "r1_q01",
     round: 1,
     type: "text",
     tamilCategory: "Kollywood Blockbuster",
@@ -22,7 +22,7 @@ export const INITIAL_QUESTIONS = [
       { id: 1, label: "Clue 1: Cocoa beans & artisan chocolate factory", url: "https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=800&auto=format&fit=crop&q=80" },
       { id: 2, label: "Clue 2: Wild ferocious hyena in snowy mountains", url: "https://images.unsplash.com/photo-1534188753412-3e26d0d618d6?w=800&auto=format&fit=crop&q=80" },
       { id: 3, label: "Clue 3: Cozy cafe & bakery in snowy Kashmir", url: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop&q=80" },
-      { id: 4, label: "Clue 4: Badass Leo Das / Parthiban identity", url: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop&q=80" },
+      { id: 4, label: "Clue 4: Fierce hero with curly hair in intense combat", url: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop&q=80" },
     ],
     correctAnswer: "Leo",
     aliases: ["leo", "leo das", "parthiban", "thalapathy vijay leo", "vijay leo", "bloody sweet"],
@@ -32,7 +32,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Leo (2023) features Parthiban running a chocolate cafe in Kashmir, battling a wild hyena, with the reveal of Leo Das ('Bloody Sweet')!"
   },
   {
-    id: "r1_q02_jailer",
+    id: "r1_q02",
     round: 1,
     type: "text",
     tamilCategory: "Superstar Mass",
@@ -40,9 +40,9 @@ export const INITIAL_QUESTIONS = [
     prompt: "Connect the 4 clues to name this Nelson Dilipkumar & Superstar Rajinikanth mega blockbuster.",
     clues: [
       { id: 1, label: "Clue 1: Vintage black Ambassador car & wire spectacles", url: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format&fit=crop&q=80" },
-      { id: 2, label: "Clue 2: Retired Jailer Tiger Muthuvel Pandian", url: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=800&auto=format&fit=crop&q=80" },
+      { id: 2, label: "Clue 2: Stern retired officer in safari uniform & wire spectacles", url: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=800&auto=format&fit=crop&q=80" },
       { id: 3, label: "Clue 3: Crown cameos: Shivarajkumar (Narasimha) & Mohanlal (Mathew)", url: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=80" },
-      { id: 4, label: "Clue 4: Anirudh's thunderous 'Hukum - Alappara Kelaparom' BGM", url: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop&q=80" },
+      { id: 4, label: "Clue 4: Blaster speaker & vinyl record pumping bass music", url: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop&q=80" },
     ],
     correctAnswer: "Jailer",
     aliases: ["jailer", "tiger muthuvel pandian", "muthuvel pandian", "rajini jailer", "hukum"],
@@ -52,17 +52,17 @@ export const INITIAL_QUESTIONS = [
     explanation: "Jailer (2023) stars Superstar Rajinikanth as Tiger Muthuvel Pandian, featuring iconic cameos by Shivarajkumar & Mohanlal, with the chartbuster 'Hukum'!"
   },
   {
-    id: "r1_q03_anirudh",
+    id: "r1_q03",
     round: 1,
     type: "text",
     tamilCategory: "Tamil Music Icon",
     title: "The Rockstar Sensation",
     prompt: "Connect the 4 clues to identify this sensational music director ruling Indian cinema.",
     clues: [
-      { id: 1, label: "Clue 1: Viral global phenomenon 'Why This Kolaveri Di' (2011)", url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop&q=80" },
+      { id: 1, label: "Clue 1: Acoustic soup song recording studio mic", url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop&q=80" },
       { id: 2, label: "Clue 2: Studio keyboard synthesizer & mixing headphones", url: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&auto=format&fit=crop&q=80" },
       { id: 3, label: "Clue 3: Massive live concerts with screaming arena crowds", url: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&auto=format&fit=crop&q=80" },
-      { id: 4, label: "Clue 4: 'Hukum', 'Badass', 'Vathi Coming', 'Chaleya' hits", url: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop&q=80" },
+      { id: 4, label: "Clue 4: Gold disc platinum streaming records chartbuster", url: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop&q=80" },
     ],
     correctAnswer: "Anirudh Ravichander",
     aliases: ["anirudh", "anirudh ravichander", "ani", "rockstar anirudh"],
@@ -72,7 +72,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Anirudh Ravichander debuted with '3' (Why This Kolaveri Di) and has become Kollywood's undisputed Rockstar BGM emperor."
   },
   {
-    id: "r1_q04_amaran",
+    id: "r1_q04",
     round: 1,
     type: "text",
     tamilCategory: "Kollywood 2024",
@@ -81,8 +81,8 @@ export const INITIAL_QUESTIONS = [
     clues: [
       { id: 1, label: "Clue 1: Indian Army 44 Rashtriya Rifles camouflage uniform", url: "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800&auto=format&fit=crop&q=80" },
       { id: 2, label: "Clue 2: Snowbound peaks & Shopian anti-terror operation", url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&auto=format&fit=crop&q=80" },
-      { id: 3, label: "Clue 3: Indu Rebecca Varghese played by Sai Pallavi", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=80" },
-      { id: 4, label: "Clue 4: Major Mukund Varadarajan AC (Ashoka Chakra)", url: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&auto=format&fit=crop&q=80" },
+      { id: 3, label: "Clue 3: Emotional reunion and military farewell ceremony", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=80" },
+      { id: 4, label: "Clue 4: Gallantry medal ribbon of honor & valor", url: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&auto=format&fit=crop&q=80" },
     ],
     correctAnswer: "Amaran",
     aliases: ["amaran", "major mukund", "major mukund varadarajan", "mukund varadarajan", "sivakarthikeyan amaran"],
@@ -92,7 +92,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Amaran (2024), directed by Rajkumar Periasamy and produced by Kamal Haasan, honors the real-life bravery of Major Mukund Varadarajan AC."
   },
   {
-    id: "r1_q05_kalam",
+    id: "r1_q05",
     round: 1,
     type: "text",
     tamilCategory: "Tamil Legend",
@@ -112,7 +112,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Dr. A. P. J. Abdul Kalam was born in Rameswaram, led India's missile program, and inspired millions worldwide as the People's President."
   },
   {
-    id: "r1_q06_vadivelu",
+    id: "r1_q06",
     round: 1,
     type: "text",
     tamilCategory: "Tamil Comedy Icon",
@@ -132,7 +132,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Vadivelu (Vaigai Puyal) created timeless cultural icons like Contractor Naesamani (#PrayForNaesamani), Kaipulla, and Imsai Arasan 23am Pulikesi!"
   },
   {
-    id: "r1_q07_ghilli",
+    id: "r1_q07",
     round: 1,
     type: "text",
     tamilCategory: "Tamil Cult Classic",
@@ -152,7 +152,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Ghilli (2004) starring Thalapathy Vijay, Trisha, and Prakash Raj as Muthupandi is one of Kollywood's highest grossing cult re-releases of all time!"
   },
   {
-    id: "r1_q08_sundar_pichai",
+    id: "r1_q08",
     round: 1,
     type: "text",
     tamilCategory: "Tamil Global Titan (Tech)",
@@ -172,7 +172,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Sundar Pichai was born in Madurai, raised in Chennai, led the creation of Google Chrome, and is now the CEO of Alphabet & Google."
   },
   {
-    id: "r1_q09_gukesh",
+    id: "r1_q09",
     round: 1,
     type: "text",
     tamilCategory: "Tamil Sports Legend",
@@ -192,7 +192,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Chennai's D. Gukesh became the youngest challenger in World Chess Championship history after winning the 2024 Candidates Tournament!"
   },
   {
-    id: "r1_q10_ai_chatgpt",
+    id: "r1_q10",
     round: 1,
     type: "text",
     tamilCategory: "Global Tech Phenomenon",
@@ -216,7 +216,7 @@ export const INITIAL_QUESTIONS = [
   // ROUND 1: BACKUP QUESTIONS (10 Backup Questions for Shuffling)
   // =========================================================================
   {
-    id: "r1_q11_pongal",
+    id: "r1_q11",
     round: 1,
     isBackup: true,
     type: "text",
@@ -227,7 +227,7 @@ export const INITIAL_QUESTIONS = [
       { id: 1, label: "Clue 1: Tall purple sugarcane stalks & fresh turmeric bunch", url: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=80" },
       { id: 2, label: "Clue 2: Decorated earthen clay pot boiling over sweet milk rice", url: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800&auto=format&fit=crop&q=80" },
       { id: 3, label: "Clue 3: Valiant youth embracing roaring bulls in Alanganallur Jallikattu", url: "https://images.unsplash.com/photo-1534188753412-3e26d0d618d6?w=800&auto=format&fit=crop&q=80" },
-      { id: 4, label: "Clue 4: 'Pongalo Pongal!' jubilant chant welcoming Thai month", url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop&q=80" },
+      { id: 4, label: "Clue 4: Jubilant harvest chant welcoming the auspicious Tamil Thai month", url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop&q=80" },
     ],
     correctAnswer: "Pongal",
     aliases: ["pongal", "thai pongal", "jallikattu", "mattu pongal", "boghi"],
@@ -237,7 +237,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Pongal is Tamil Nadu's signature harvest festival celebrated over 4 days with sweet rice overflowing from clay pots, sugarcane, and Jallikattu!"
   },
   {
-    id: "r1_q12_thiruvalluvar",
+    id: "r1_q12",
     round: 1,
     isBackup: true,
     type: "text",
@@ -258,7 +258,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Thiruvalluvar authored the Thirukkural consisting of 1330 rhyming couplets across 133 chapters, celebrated with a 133-foot statue at Kanyakumari."
   },
   {
-    id: "r1_q13_bharathiyar",
+    id: "r1_q13",
     round: 1,
     isBackup: true,
     type: "text",
@@ -279,7 +279,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Mahakavi Subramania Bharati was a pioneer of modern Tamil poetry whose patriotic and progressive poems energized India's freedom struggle."
   },
   {
-    id: "r1_q14_kamarajar",
+    id: "r1_q14",
     round: 1,
     isBackup: true,
     type: "text",
@@ -300,7 +300,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Perunthalaivar K. Kamaraj served as Chief Minister of Tamil Nadu (1954–1963), opened thousands of schools, and pioneered the free mid-day meal scheme."
   },
   {
-    id: "r1_q15_madurai",
+    id: "r1_q15",
     round: 1,
     isBackup: true,
     type: "text",
@@ -309,7 +309,7 @@ export const INITIAL_QUESTIONS = [
     prompt: "Connect the 4 clues to identify this ancient heritage city situated on the banks of River Vaigai.",
     clues: [
       { id: 1, label: "Clue 1: Soaring colorful sculpted towers of Meenakshi Amman Temple", url: "https://images.unsplash.com/photo-1587474260584-136574528ed5?w=800&auto=format&fit=crop&q=80" },
-      { id: 2, label: "Clue 2: Fragrant GI-tagged Madurai Malli (Jasmine flower garland)", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=80" },
+      { id: 2, label: "Clue 2: Fragrant GI-tagged fresh white Jasmine flower garlands", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=80" },
       { id: 3, label: "Clue 3: Chilled badam pisin sweet Jigarthanda drink stall", url: "https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=800&auto=format&fit=crop&q=80" },
       { id: 4, label: "Clue 4: Thoonga Nagaram midnight food streets & Thirumalai Nayakkar Palace", url: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&auto=format&fit=crop&q=80" },
     ],
@@ -321,7 +321,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Madurai, known as Thoonga Nagaram (City that Never Sleeps), is famous for the historic Meenakshi Temple, Madurai Malli, and Jigarthanda."
   },
   {
-    id: "r1_q16_thanjavur_temple",
+    id: "r1_q16",
     round: 1,
     isBackup: true,
     type: "text",
@@ -342,7 +342,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Thanjavur Brihadisvara Temple (Periya Kovil) was consecrated in 1010 CE by Raja Raja Chola I and is renowned for its 80-tonne monolithic granite Vimana."
   },
   {
-    id: "r1_q17_velu_nachiyar",
+    id: "r1_q17",
     round: 1,
     isBackup: true,
     type: "text",
@@ -363,7 +363,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Veeramangai Rani Velu Nachiyar was queen of Sivaganga and the first Indian sovereign to successfully defeat British colonial forces, regaining her throne in 1780."
   },
   {
-    id: "r1_q18_tvk",
+    id: "r1_q18",
     round: 1,
     isBackup: true,
     type: "text",
@@ -384,7 +384,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Tamilaga Vettri Kazhagam (TVK) was founded in February 2024 by Thalapathy Vijay, unveiling its elephant-and-vaagai flag and ideological manifesto."
   },
   {
-    id: "r1_q19_kanyakumari",
+    id: "r1_q19",
     round: 1,
     isBackup: true,
     type: "text",
@@ -405,7 +405,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Kanyakumari is the southernmost coastal point of mainland India, famed for the meeting of three seas, Vivekananda Rock, and panoramic sunsets."
   },
   {
-    id: "r1_q20_ironman",
+    id: "r1_q20",
     round: 1,
     isBackup: true,
     type: "text",
@@ -416,7 +416,7 @@ export const INITIAL_QUESTIONS = [
       { id: 1, label: "Clue 1: Glowing blue fusion Arc Reactor mounted in chest", url: "https://images.unsplash.com/photo-1517976487502-588383a8b27f?w=800&auto=format&fit=crop&q=80" },
       { id: 2, label: "Clue 2: Hot-rod red and gold powered robotic exoskeleton armor suit", url: "https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=800&auto=format&fit=crop&q=80" },
       { id: 3, label: "Clue 3: JARVIS artificial intelligence voice assistant", url: "https://images.unsplash.com/photo-1677442136019-21780efad99a?w=800&auto=format&fit=crop&q=80" },
-      { id: 4, label: "Clue 4: Tony Stark snapping the Infinity Stones ('I am Iron Man')", url: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&auto=format&fit=crop&q=80" },
+      { id: 4, label: "Clue 4: Armored hero with glowing chest arc reactor snapping the Infinity Stones", url: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&auto=format&fit=crop&q=80" },
     ],
     correctAnswer: "Iron Man",
     aliases: ["iron man", "tony stark", "ironman", "stark"],
@@ -431,7 +431,7 @@ export const INITIAL_QUESTIONS = [
   // Triggered only if there is a tie at the Rank 15 cutoff
   // =========================================================================
   {
-    id: "r1_sd01_lcu",
+    id: "r1_sd01",
     round: 1,
     isSuddenDeath: true,
     type: "text",
@@ -452,7 +452,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "The Lokesh Cinematic Universe (LCU) unites Kaithi, Vikram, and Leo with recurring characters, Biryani, guns, and Rolex!"
   },
   {
-    id: "r1_sd02_ar_rahman",
+    id: "r1_sd02",
     round: 1,
     isSuddenDeath: true,
     type: "text",
@@ -480,7 +480,7 @@ export const INITIAL_QUESTIONS = [
 
   // ------------------------- GROUP A (10 Questions) -------------------------
   {
-    id: "r2_gA_01_vikram",
+    id: "r2_ga_01",
     round: 2,
     group: "A",
     type: "buzzer",
@@ -498,7 +498,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Vikram (2022) starring Kamal Haasan, Fahadh Faasil, Vijay Sethupathi, and Suriya as Rolex broke Kollywood box office records!"
   },
   {
-    id: "r2_gA_02_yuvan",
+    id: "r2_ga_02",
     round: 2,
     group: "A",
     type: "buzzer",
@@ -516,7 +516,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Yuvan Shankar Raja (U1) is celebrated by Tamil youth for his soul-stirring BGMs and songs in Pudhupettai, Mankatha, and GOAT."
   },
   {
-    id: "r2_gA_03_chennai",
+    id: "r2_ga_03",
     round: 2,
     group: "A",
     type: "buzzer",
@@ -534,7 +534,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Chennai (Madras) is defined by its iconic Marina Beach, heritage railway architecture, filter coffee, and vibrant culture!"
   },
   {
-    id: "r2_gA_04_thuppakki",
+    id: "r2_ga_04",
     round: 2,
     group: "A",
     type: "buzzer",
@@ -552,7 +552,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Thuppakki (2012), directed by AR Murugadoss starring Thalapathy Vijay, revolutionized Indian military thrillers with the iconic 12 sleeper-cell operation!"
   },
   {
-    id: "r2_gA_05_periyar",
+    id: "r2_ga_05",
     round: 2,
     group: "A",
     type: "buzzer",
@@ -570,7 +570,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Thanthai Periyar founded the Self-Respect Movement and Dravidar Kazhagam, pioneering women's equality, rationalism, and social justice across Tamil Nadu."
   },
   {
-    id: "r2_gA_06_ilaiyaraaja",
+    id: "r2_ga_06",
     round: 2,
     group: "A",
     type: "buzzer",
@@ -588,7 +588,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Isaignani Ilaiyaraaja composed music for over 1,000 films, fusing Tamil folk traditions with Western classical polyphony."
   },
   {
-    id: "r2_gA_07_karthigai_deepam",
+    id: "r2_ga_07",
     round: 2,
     group: "A",
     type: "buzzer",
@@ -606,7 +606,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Karthigai Deepam is one of Tamil Nadu's oldest festivals, celebrated with lamps across homes and the legendary Maha Deepam atop Thiruvannamalai hill."
   },
   {
-    id: "r2_gA_08_voc",
+    id: "r2_ga_08",
     round: 2,
     group: "A",
     type: "buzzer",
@@ -624,7 +624,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "V. O. Chidambaram Pillai (Kappalottiya Thamizhan) launched India's first indigenous shipping service to break British monopoly and endured brutal prison labor."
   },
   {
-    id: "r2_gA_09_goundamani_senthil",
+    id: "r2_ga_09",
     round: 2,
     group: "A",
     type: "buzzer",
@@ -642,7 +642,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Goundamani & Senthil are Kollywood's gold standard comedy pair, whose 'Vazhaipazham' and 'Petromax Light' gags remain unmatched evergreen pop-culture memes."
   },
   {
-    id: "r2_gA_10_messi",
+    id: "r2_ga_10",
     round: 2,
     group: "A",
     type: "buzzer",
@@ -662,7 +662,7 @@ export const INITIAL_QUESTIONS = [
 
   // ------------------------- GROUP B (10 Questions) -------------------------
   {
-    id: "r2_gB_01_mankatha",
+    id: "r2_gb_01",
     round: 2,
     group: "B",
     type: "buzzer",
@@ -680,7 +680,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Mankatha (2011), directed by Venkat Prabhu, starred Thala Ajith Kumar as corrupt cop Vinayak Mahadev stealing 500 Crores!"
   },
   {
-    id: "r2_gB_02_chandrayaan",
+    id: "r2_gb_02",
     round: 2,
     group: "B",
     type: "buzzer",
@@ -698,7 +698,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Chandrayaan-3 made India the first nation to land on the Moon's South Pole, led by Project Director Dr. P. Veeramuthuvel from Viluppuram, Tamil Nadu."
   },
   {
-    id: "r2_gB_03_jigarthanda",
+    id: "r2_gb_03",
     round: 2,
     group: "B",
     type: "buzzer",
@@ -716,7 +716,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Karthik Subbaraj's Jigarthanda and Jigarthanda DoubleX connect the famous Madurai sweet drink with cinema-making gangsters!"
   },
   {
-    id: "r2_gB_04_mgr",
+    id: "r2_gb_04",
     round: 2,
     group: "B",
     type: "buzzer",
@@ -734,7 +734,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "M. G. Ramachandran (MGR) was a matinee idol turned 3-time Chief Minister who founded the AIADMK and expanded nutritious school meals."
   },
   {
-    id: "r2_gB_05_mahabalipuram",
+    id: "r2_gb_05",
     round: 2,
     group: "B",
     type: "buzzer",
@@ -752,7 +752,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Mahabalipuram (Mamallapuram) is a 7th-century coastal port city of the Pallavas famous for its monolithic rock rathas, Shore Temple, and Krishna's Butter Ball."
   },
   {
-    id: "r2_gB_06_kaithi",
+    id: "r2_gb_06",
     round: 2,
     group: "B",
     type: "buzzer",
@@ -770,7 +770,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Kaithi (2019) directed by Lokesh Kanagaraj starred Karthi as prisoner Dilli, kickstarting the blockbuster Lokesh Cinematic Universe (LCU)!"
   },
   {
-    id: "r2_gB_07_avvaiyar",
+    id: "r2_gb_07",
     round: 2,
     group: "B",
     type: "buzzer",
@@ -788,7 +788,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Avvaiyar is the beloved ancient Tamil woman poet whose works like Athichoodi and Konraiventhan teach timeless ethical maxims to children."
   },
   {
-    id: "r2_gB_08_santhanam",
+    id: "r2_gb_08",
     round: 2,
     group: "B",
     type: "buzzer",
@@ -806,7 +806,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Santhanam gained fame through Vijay TV's Lollu Sabha before dominating 2010s Kollywood comedy alongside Arya, Simbu, and Udhayanidhi."
   },
   {
-    id: "r2_gB_09_halwa",
+    id: "r2_gb_09",
     round: 2,
     group: "B",
     type: "buzzer",
@@ -815,7 +815,7 @@ export const INITIAL_QUESTIONS = [
     prompt: "BUZZ IN! Connect: Thamirabarani perennial river water, Ghee-dripping dark wheat dessert, Iruttu Kadai shop.",
     clues: [
       { id: 1, label: "Clue 1: Pure crystal Thamirabarani river water flowing through southern hills", url: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop&q=80" },
-      { id: 2, label: "Clue 2: Glossy warm wheat jelly halwa wrapped in fresh green plantain leaf", url: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800&auto=format&fit=crop&q=80" },
+      { id: 2, label: "Clue 2: Glossy warm rich wheat ghee sweet wrapped in fresh green plantain leaf", url: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800&auto=format&fit=crop&q=80" },
     ],
     correctAnswer: "Tirunelveli Halwa",
     aliases: ["tirunelveli halwa", "nellai halwa", "iruttu kadai halwa", "halwa"],
@@ -824,7 +824,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Tirunelveli Halwa is world-famous for its silky texture made from fermented wheat milk, pure ghee, and the distinct sweet waters of the Thamirabarani River."
   },
   {
-    id: "r2_gB_10_steve_jobs",
+    id: "r2_gb_10",
     round: 2,
     group: "B",
     type: "buzzer",
@@ -844,7 +844,7 @@ export const INITIAL_QUESTIONS = [
 
   // ------------------------- GROUP C (10 Questions) -------------------------
   {
-    id: "r2_gC_01_ponniyin_selvan",
+    id: "r2_gc_01",
     round: 2,
     group: "C",
     type: "buzzer",
@@ -862,7 +862,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Mani Ratnam's Ponniyin Selvan (PS-1 & PS-2) adapted Kalki's monumental novel about the golden Chola empire."
   },
   {
-    id: "r2_gC_02_sivakarthikeyan",
+    id: "r2_gc_02",
     round: 2,
     group: "C",
     type: "buzzer",
@@ -880,7 +880,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Sivakarthikeyan rose from Vijay TV mimicry contestant to anchor, then to box-office king with hits like Remo, Doctor, and Amaran!"
   },
   {
-    id: "r2_gC_03_elon_musk",
+    id: "r2_gc_03",
     round: 2,
     group: "C",
     type: "buzzer",
@@ -898,7 +898,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Elon Musk heads Tesla, SpaceX, and X, pioneering electric vehicles, reusable space rockets, and satellite internet."
   },
   {
-    id: "r2_gC_04_karunanidhi",
+    id: "r2_gc_04",
     round: 2,
     group: "C",
     type: "buzzer",
@@ -916,7 +916,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "M. Karunanidhi (Kalaignar) was a master orator, scriptwriter of Parasakthi, and 5-time Chief Minister of Tamil Nadu who led the DMK for five decades."
   },
   {
-    id: "r2_gC_05_anbe_sivam",
+    id: "r2_gc_05",
     round: 2,
     group: "C",
     type: "buzzer",
@@ -934,7 +934,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Anbe Sivam (2003) starring Kamal Haasan and R. Madhavan is regarded as one of Indian cinema's greatest humanist classics."
   },
   {
-    id: "r2_gC_06_ooty",
+    id: "r2_gc_06",
     round: 2,
     group: "C",
     type: "buzzer",
@@ -952,7 +952,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Ooty (Udhagamandalam) in the Nilgiri Hills is the celebrated 'Queen of Hill Stations', famed for its UNESCO toy train, botanical gardens, and tea."
   },
   {
-    id: "r2_gC_07_harris_jayaraj",
+    id: "r2_gc_07",
     round: 2,
     group: "C",
     type: "buzzer",
@@ -970,7 +970,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Harris Jayaraj debuted with Minnale and scored era-defining albums including Kaakha Kaakha, Anniyan, Ghajini, and Vettaiyaadu Vilaiyaadu."
   },
   {
-    id: "r2_gC_08_chithirai",
+    id: "r2_gc_08",
     round: 2,
     group: "C",
     type: "buzzer",
@@ -988,7 +988,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Madurai Chithirai Thiruvizha attracts over a million pilgrims to witness Lord Kallazhagar's grand descent into the Vaigai River."
   },
   {
-    id: "r2_gC_09_vadachennai",
+    id: "r2_gc_09",
     round: 2,
     group: "C",
     type: "buzzer",
@@ -1006,7 +1006,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Vetrimaaran's Vada Chennai (2018) starring Dhanush depicts the generational political and carrom subculture of North Madras."
   },
   {
-    id: "r2_gC_10_virat_kohli",
+    id: "r2_gc_10",
     round: 2,
     group: "C",
     type: "buzzer",
@@ -1031,7 +1031,7 @@ export const INITIAL_QUESTIONS = [
 
   // ------------------------- FINALS CORE (10 Questions) -------------------------
   {
-    id: "r3_fin_01_rajinikanth",
+    id: "r3_fin_01",
     round: 3,
     type: "buzzer",
     tamilCategory: "Tamil Cinema Legend",
@@ -1049,7 +1049,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Superstar Rajinikanth is Indian cinema's biggest cultural icon with enduring classics like Baashha, Annamalai, Sivaji, and Jailer."
   },
   {
-    id: "r3_fin_02_mani_ratnam",
+    id: "r3_fin_02",
     round: 3,
     type: "buzzer",
     tamilCategory: "Tamil Master Director",
@@ -1067,7 +1067,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Mani Ratnam reshaped Indian visual storytelling with masterpieces like Mouna Ragam, Nayakan, Thalapathi, Iruvar, and Ponniyin Selvan."
   },
   {
-    id: "r3_fin_03_thalapathy_vijay",
+    id: "r3_fin_03",
     round: 3,
     type: "buzzer",
     tamilCategory: "Tamil Box Office King",
@@ -1085,7 +1085,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Thalapathy Vijay is Kollywood's box-office titan with historic hits including Ghilli, Thuppakki, Mersal, Master, Leo, and GOAT."
   },
   {
-    id: "r3_fin_04_cr7",
+    id: "r3_fin_04",
     round: 3,
     type: "buzzer",
     tamilCategory: "Global Sports Legend",
@@ -1103,7 +1103,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Cristiano Ronaldo (CR7) is the highest goalscorer in football history, an idol to millions of sports lovers across Tamil Nadu and the globe!"
   },
   {
-    id: "r3_fin_05_kamal_haasan",
+    id: "r3_fin_05",
     round: 3,
     type: "buzzer",
     tamilCategory: "Tamil Cinema Legend",
@@ -1112,7 +1112,7 @@ export const INITIAL_QUESTIONS = [
     clues: [
       { id: 1, label: "Clue 1: Prosthetic makeup case transforming into 10 characters", url: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=800&auto=format&fit=crop&q=80" },
       { id: 2, label: "Clue 2: 4 National Film Awards & Padma Bhushan medal", url: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=80" },
-      { id: 3, label: "Clue 3: Raaj Kamal Films International lion emblem", url: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80" },
+      { id: 3, label: "Clue 3: Iconic film production house roaring lion banner emblem", url: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80" },
     ],
     correctAnswer: "Kamal Haasan",
     aliases: ["kamal haasan", "kamal", "ulaganayagan", "kamalhasan", "ulaganayagan kamal haasan"],
@@ -1121,7 +1121,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Kamal Haasan (Ulaganayagan) is one of world cinema's most versatile actors, writers, and directors with legendary works spanning six decades."
   },
   {
-    id: "r3_fin_06_jayalalithaa",
+    id: "r3_fin_06",
     round: 3,
     type: "buzzer",
     tamilCategory: "Tamil Political Icon",
@@ -1139,7 +1139,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Puratchi Thalaivi J. Jayalalithaa served as Chief Minister of Tamil Nadu six times, pioneering welfare models like Amma Canteens and Cradle Baby scheme."
   },
   {
-    id: "r3_fin_07_ms_dhoni",
+    id: "r3_fin_07",
     round: 3,
     type: "buzzer",
     tamilCategory: "Tamil Sports Pride",
@@ -1157,7 +1157,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "MS Dhoni is revered as Chennai's adopted son ('Thala'), leading Chennai Super Kings to a record-tying 5 IPL titles."
   },
   {
-    id: "r3_fin_08_arignar_anna",
+    id: "r3_fin_08",
     round: 3,
     type: "buzzer",
     tamilCategory: "Tamil Statesman & Scholar",
@@ -1175,7 +1175,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Arignar Anna founded the DMK and became Chief Minister in 1967, officially naming the state 'Tamil Nadu' and legalizing Self-Respect marriages."
   },
   {
-    id: "r3_fin_09_watch_24",
+    id: "r3_fin_09",
     round: 3,
     type: "buzzer",
     tamilCategory: "Tamil Sci-Fi Cult",
@@ -1193,7 +1193,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "24 (2016), directed by Vikram Kumar, starred Suriya in three roles (Mani, Sethuraman, and Athreya) centered around a 24-hour time machine watch."
   },
   {
-    id: "r3_fin_10_shankar",
+    id: "r3_fin_10",
     round: 3,
     type: "buzzer",
     tamilCategory: "Tamil Grand Director",
@@ -1213,7 +1213,7 @@ export const INITIAL_QUESTIONS = [
 
   // ------------------------- FINALS BACKUP (10 Questions) -------------------------
   {
-    id: "r3_fin_11_ajith_kumar",
+    id: "r3_fin_11",
     round: 3,
     isBackup: true,
     type: "buzzer",
@@ -1232,7 +1232,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Ajith Kumar (AK / Thala) is one of Tamil cinema's biggest superstars, also an international motor racer, rifle shooter, and drone researcher."
   },
   {
-    id: "r3_fin_12_dhanush",
+    id: "r3_fin_12",
     round: 3,
     isBackup: true,
     type: "buzzer",
@@ -1251,7 +1251,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Dhanush won multiple National Film Awards for Best Actor in Aadukalam and Asuran, and starred in Hollywood's The Gray Man and Bollywood's Raanjhanaa."
   },
   {
-    id: "r3_fin_13_vijay_sethupathi",
+    id: "r3_fin_13",
     round: 3,
     isBackup: true,
     type: "buzzer",
@@ -1270,7 +1270,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Vijay Sethupathi (Makkal Selvan) is revered for natural acting across films like Pizza, Vikram Vedha, 96, Super Deluxe, and his 50th hit Maharaja."
   },
   {
-    id: "r3_fin_14_suriya",
+    id: "r3_fin_14",
     round: 3,
     isBackup: true,
     type: "buzzer",
@@ -1289,7 +1289,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Suriya won the National Award for Soorarai Pottru, starred in the globally acclaimed Jai Bhim, and educates thousands through the Agaram Foundation."
   },
   {
-    id: "r3_fin_15_vetrimaaran",
+    id: "r3_fin_15",
     round: 3,
     isBackup: true,
     type: "buzzer",
@@ -1308,7 +1308,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Vetrimaaran is celebrated for his hard-hitting, literature-based cinema including Polladhavan, Aadukalam, Visaranai, Vada Chennai, Asuran, and Viduthalai."
   },
   {
-    id: "r3_fin_16_rajaraja_chola",
+    id: "r3_fin_16",
     round: 3,
     isBackup: true,
     type: "buzzer",
@@ -1316,7 +1316,7 @@ export const INITIAL_QUESTIONS = [
     title: "Finals Backup — Question 16: King of Kings",
     prompt: "FINAL BUZZER! Connect: 'Arulmozhivarman', Building the Big Temple of Thanjavur, Blue naval fleet commanding the Bay of Bengal, Golden Chola Tiger.",
     clues: [
-      { id: 1, label: "Clue 1: Ancient naval warships with Chola tiger sails dominating the high seas", url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop&q=80" },
+      { id: 1, label: "Clue 1: Imperial majestic naval warships dominating the Bay of Bengal", url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop&q=80" },
       { id: 2, label: "Clue 2: The soaring 216-foot granite Vimana tower of Thanjavur Big Temple", url: "https://images.unsplash.com/photo-1587474260584-136574528ed5?w=800&auto=format&fit=crop&q=80" },
       { id: 3, label: "Clue 3: Imperial coronation crown and copper plate land revenue grants", url: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80" },
     ],
@@ -1327,7 +1327,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Raja Raja Chola I (reigned 985–1014 CE) was the greatest emperor of the Chola Dynasty, builder of the Brihadisvara Temple, and creator of a powerful maritime empire."
   },
   {
-    id: "r3_fin_17_deva",
+    id: "r3_fin_17",
     round: 3,
     isBackup: true,
     type: "buzzer",
@@ -1346,7 +1346,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Deva (Thenisai Thendral) brought North Chennai Gaana folk music to mainstream cinema, composing legendary soundtracks for Baashha, Annamalai, and Basha."
   },
   {
-    id: "r3_fin_18_praggnanandhaa",
+    id: "r3_fin_18",
     round: 3,
     isBackup: true,
     type: "buzzer",
@@ -1365,7 +1365,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "R. Praggnanandhaa became a world sensation after beating Magnus Carlsen multiple times and reaching the 2023 FIDE World Cup Final alongside his GM sister Vaishali."
   },
   {
-    id: "r3_fin_19_kadalai_mittai",
+    id: "r3_fin_19",
     round: 3,
     isBackup: true,
     type: "buzzer",
@@ -1384,7 +1384,7 @@ export const INITIAL_QUESTIONS = [
     explanation: "Kovilpatti Kadalai Mittai earned a Geographical Indication (GI) tag for its distinctive recipe blending roasted groundnuts with organic jaggery syrup and local water."
   },
   {
-    id: "r3_fin_20_spiderman",
+    id: "r3_fin_20",
     round: 3,
     isBackup: true,
     type: "buzzer",
@@ -1392,7 +1392,7 @@ export const INITIAL_QUESTIONS = [
     title: "Finals Backup — Question 20: The Friendly Neighborhood Hero",
     prompt: "FINAL BUZZER! Connect: Radioactive spider bite, Red & blue web suit, 'With great power comes great responsibility', Peter Parker.",
     clues: [
-      { id: 1, label: "Clue 1: Intricate silk spiderweb glistening across skyscraper window glass", url: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=800&auto=format&fit=crop&q=80" },
+      { id: 1, label: "Clue 1: Intricate silk web glistening across towering skyscraper glass", url: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=800&auto=format&fit=crop&q=80" },
       { id: 2, label: "Clue 2: Red and cobalt blue masked suit swinging between high-rise buildings", url: "https://images.unsplash.com/photo-1517976487502-588383a8b27f?w=800&auto=format&fit=crop&q=80" },
       { id: 3, label: "Clue 3: High school student with SLR camera working for the Daily Bugle", url: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80" },
     ],

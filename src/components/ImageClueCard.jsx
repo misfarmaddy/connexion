@@ -2,9 +2,11 @@
 import React, { useState } from "react";
 import { Maximize2, X, Image as ImageIcon } from "lucide-react";
 
-export default function ImageClueCard({ clue, index, totalClues = 4, isLarge = false }) {
+export default function ImageClueCard({ clue, index, totalClues = 4, isLarge = false, showLabel = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hasError, setHasError] = useState(false);
+
+  const displayAlt = showLabel && clue.label ? clue.label : `Clue ${index + 1}`;
 
   return (
     <>
@@ -28,7 +30,7 @@ export default function ImageClueCard({ clue, index, totalClues = 4, isLarge = f
           {!hasError ? (
             <img
               src={clue.url}
-              alt={clue.label || `Clue ${index + 1}`}
+              alt={displayAlt}
               onError={() => setHasError(true)}
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               loading="lazy"
@@ -41,8 +43,8 @@ export default function ImageClueCard({ clue, index, totalClues = 4, isLarge = f
           )}
         </div>
 
-        {/* Subtitle / Caption */}
-        {clue.label && (
+        {/* Subtitle / Caption - Only displayed for Admin or when showLabel is explicitly enabled */}
+        {showLabel && clue.label && (
           <div className="mt-2 px-1 pb-1">
             <p className="text-xs font-bold text-slate-700 truncate">
               {clue.label}
@@ -63,7 +65,7 @@ export default function ImageClueCard({ clue, index, totalClues = 4, isLarge = f
           >
             <div className="flex items-center justify-between pb-3 px-2 border-b border-purple-100">
               <span className="text-sm font-black text-purple-900">
-                Clue #{index + 1} of {totalClues}: {clue.label || ""}
+                Clue #{index + 1} of {totalClues}{showLabel && clue.label ? `: ${clue.label}` : ""}
               </span>
               <button
                 onClick={() => setIsOpen(false)}
@@ -75,7 +77,7 @@ export default function ImageClueCard({ clue, index, totalClues = 4, isLarge = f
             <div className="flex items-center justify-center p-2 max-h-[78vh]">
               <img
                 src={clue.url}
-                alt={clue.label}
+                alt={displayAlt}
                 className="max-h-[72vh] w-auto max-w-full rounded-2xl object-contain shadow-lg"
               />
             </div>

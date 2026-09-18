@@ -13,6 +13,7 @@ import ImageClueCard from "../components/ImageClueCard";
 import TimerBar from "../components/TimerBar";
 import BuzzerButton from "../components/BuzzerButton";
 import BackgroundCanvas from "../components/BackgroundCanvas";
+import { mockSync } from "../firebase/mockSyncService";
 
 export default function ParticipantPortal() {
   const { currentTeam, loginTeam, joinTeam, logoutTeam } = useAuth();
@@ -23,7 +24,10 @@ export default function ParticipantPortal() {
     timeRemaining, 
     submitAnswer, 
     pressBuzzer,
-    teams
+    teams,
+    round1Questions,
+    round2Questions,
+    round3Questions
   } = useGame();
   const { playCorrect, playWrong, playTick } = useSound();
 
@@ -60,6 +64,19 @@ export default function ParticipantPortal() {
     setSubmittedAnswer(null);
     setIsAnswerLocked(false);
   }, [roundState.currentQuestionId]);
+
+  // Compute clean sequential question number (never leaks question ID or answer)
+  const currentQuestionNumber = React.useMemo(() => {
+    if (!activeQuestion) return 1;
+    if (activeQuestion.isSuddenDeath) return "Tiebreaker";
+    const roundList = roundState.currentRound === 1 
+      ? (round1Questions || []) 
+      : roundState.currentRound === 2 
+        ? (round2Questions || []) 
+        : (round3Questions || []);
+    const idx = roundList.findIndex(q => q.id === activeQuestion.id);
+    return idx >= 0 ? idx + 1 : 1;
+  }, [activeQuestion, roundState.currentRound, round1Questions, round2Questions, round3Questions]);
 
   // Handle Team Leader Registration
   const handleRegister = async (e) => {
@@ -224,6 +241,7 @@ export default function ParticipantPortal() {
                     onClick={() => {
                       setAuthMode("join");
                       setAuthError("");
+                      mockSync.pullFromCloud();
                     }}
                     className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
                       authMode === "join"
@@ -648,7 +666,7 @@ export default function ParticipantPortal() {
               <div className="p-5 sm:p-6 rounded-3xl bg-white/95 border-2 border-purple-200 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-purple-100 text-purple-800 border border-purple-300">
-                    Question {activeQuestion.id} &bull; {activeQuestion.type === "mcq" ? "Multiple Choice" : "Connection Challenge"}
+                    Question {currentQuestionNumber} &bull; {activeQuestion.type === "mcq" ? "Multiple Choice" : "Connection Challenge"}
                   </span>
                   <span className="text-xs font-mono font-bold text-amber-600">
                     {activeQuestion.points || 10} pts (+{activeQuestion.speedBonus || 5} max speed bonus)
@@ -667,6 +685,7 @@ export default function ParticipantPortal() {
                       clue={clue}
                       index={idx}
                       totalClues={activeQuestion.clues.length}
+                      showLabel={false}
                     />
                   ))}
                 </div>

@@ -1,0 +1,140 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #faf5ff;
+    background-image: 
+      radial-gradient(circle at 10% 15%, rgba(249, 115, 22, 0.15) 0px, transparent 45%),
+      radial-gradient(circle at 90% 12%, rgba(217, 70, 239, 0.16) 0px, transparent 45%),
+      radial-gradient(circle at 50% 85%, rgba(147, 51, 234, 0.15) 0px, transparent 50%),
+      radial-gradient(circle at 85% 75%, rgba(234, 179, 8, 0.14) 0px, transparent 45%),
+      radial-gradient(circle at 15% 80%, rgba(6, 182, 212, 0.12) 0px, transparent 45%);
+    background-attachment: fixed;
+    color: #1e1b4b;
+  }
+}
+
+/* Animations for Connection Quiz Background */
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-16px) rotate(3deg);
+  }
+}
+
+@keyframes float-reverse {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(14px) rotate(-4deg);
+  }
+}
+
+@keyframes rotate-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -60;
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: float-reverse 7s ease-in-out infinite;
+}
+
+.animate-rotate-slow {
+  animation: rotate-slow 20s linear infinite;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-dash {
+  animation: dash 3s linear infinite;
+}
+
+/* Festive Glowing Accents */
+.glow-purple {
+  box-shadow: 0 10px 30px -5px rgba(168, 85, 247, 0.35);
+}
+
+.glow-pink {
+  box-shadow: 0 10px 30px -5px rgba(236, 72, 153, 0.35);
+}
+
+.glow-emerald {
+  box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.35);
+}
+
+.glow-amber {
+  box-shadow: 0 10px 30px -5px rgba(245, 158, 11, 0.35);
+}
+
+.glow-rose {
+  box-shadow: 0 14px 40px -5px rgba(244, 63, 94, 0.5);
+}
+
+/* 3D Tactile Buzzer Button */
+.buzzer-btn {
+  box-shadow: 0 14px 0 #9f1239, 0 18px 30px rgba(225, 29, 72, 0.4);
+  transition: all 0.08s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.buzzer-btn:active:not(:disabled) {
+  transform: translateY(10px);
+  box-shadow: 0 4px 0 #9f1239, 0 8px 15px rgba(225, 29, 72, 0.3);
+}
+
+.buzzer-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  box-shadow: 0 8px 0 #9ca3af, 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom Clean Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f3e8ff;
+}
+::-webkit-scrollbar-thumb {
+  background: #c084fc;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a855f7;
+}

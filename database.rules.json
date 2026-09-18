@@ -1,0 +1,21 @@
+{
+  "rules": {
+    ".read": true,
+    "buzzerState": {
+      ".read": true,
+      ".write": "auth != null",
+      "firstBuzz": {
+        ".write": "!data.exists() || auth.token.admin === true"
+      },
+      "buzzQueue": {
+        ".write": true
+      }
+    },
+    "buzzerEvents": {
+      "": {
+        ".read": true,
+        ".write": "!data.exists() || auth.token.admin === true"
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAdmin() {
+      return request.auth != null && (request.auth.token.admin == true || request.auth.token.email.matches('.*admin.*'));
+    }
+
+    match /teams/{teamId} {
+      allow read: if true;
+      allow create: if request.resource.data.teamName != null && request.resource.data.collegeName != null;
+      allow update: if isAdmin() || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastActive', 'contactPhone', 'contactEmail']));
+      allow delete: if isAdmin();
+    }
+
+    match /questions/{questionId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /roundState/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /scoreLog/{logId} {
+      allow read: if true;
+      allow create: if isAdmin();
+      allow update, delete: if false; // Immutable audit trail
+    }
+
+    match /submissions/{subId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+  }
+}

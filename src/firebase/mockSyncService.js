@@ -1,10 +1,19 @@
-// CONNEXION - High-Fidelity Cross-Tab Live Synchronization Engine
-// Uses BroadcastChannel + localStorage to simulate Firestore & Realtime DB with zero-latency multi-tab sync
+// CONNEXION - High-Fidelity Cross-Device & Cross-Tab Live Synchronization Engine
+// Uses BroadcastChannel + WebSockets / Cloud Relay (ntfy.sh) for multi-device sync on Vercel
 
 import { INITIAL_QUESTIONS } from "./seedData";
 import { computeRound1Score, computeRankings, checkForTieAtRank15, partitionIntoGroups } from "../utils/scoring";
 
 const CHANNEL_NAME = "connexion_live_channel";
+const CLOUD_TOPIC = "cnx_casyum26_symposium_srm_bca";
+const CLOUD_HTTP_URL = `https://ntfy.sh/${CLOUD_TOPIC}`;
+const CLOUD_WS_URL = `wss://ntfy.sh/${CLOUD_TOPIC}/ws`;
+
+// Unique client instance to prevent echoing self-published cloud events
+const CLIENT_INSTANCE_ID = typeof window !== "undefined"
+  ? `client_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
+  : "node_server";
+
 let broadcastChannel = null;
 
 if (typeof window !== "undefined" && window.BroadcastChannel) {
@@ -61,6 +70,32 @@ function save(key, data) {
   }
 }
 
+// Helper: Normalize team code for ultra-forgiving comparisons
+export function normalizeCode(code) {
+  if (!code) return "";
+  return String(code).trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+// Helper: Match team code flexibly (supports "4821", "CNX-4821", "cnx 4821", "cnx4821")
+export function isCodeMatch(inputCode, storedCode) {
+  const normInput = normalizeCode(inputCode);
+  const normStored = normalizeCode(storedCode);
+  if (!normInput || !normStored) return false;
+
+  // Exact normalized match (e.g. "CNX4821" === "CNX4821")
+  if (normInput === normStored) return true;
+
+  // Extract digits for fast 4-digit code matching
+  const storedDigits = normStored.replace(/\D/g, "");
+  const inputDigits = normInput.replace(/\D/g, "");
+  if (storedDigits && inputDigits && storedDigits === inputDigits) return true;
+
+  // Substring ends-with match
+  if (normStored.endsWith(normInput) || normInput.endsWith(normStored)) return true;
+
+  return false;
+}
+
 // Helper: Generate Unique Team Code (e.g. CNX-4821)
 export function generateTeamCode(existingTeams = []) {
   let code = "";
@@ -71,6 +106,111 @@ export function generateTeamCode(existingTeams = []) {
     exists = existingTeams.some(t => t.teamCode === code);
   }
   return code;
+}
+
+// Dispatch to local browser tabs only (NO cloud bounce)
+function notifyLocal(type, payload) {
+  if (broadcastChannel) {
+    broadcastChannel.postMessage({ type, payload, timestamp: Date.now() });
+  }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("cnx_sync_event", { detail: { type, payload } }));
+  }
+}
+
+// Push to Cloud Relay (ntfy.sh) for multi-device sync
+function pushToCloud(type, payload) {
+  if (typeof window === "undefined") return;
+  try {
+    const msg = JSON.stringify({
+      senderId: CLIENT_INSTANCE_ID,
+      type,
+      payload,
+      timestamp: Date.now()
+    });
+
+    fetch(CLOUD_HTTP_URL, {
+      method: "POST",
+      body: msg,
+      headers: { "Title": type }
+    }).catch(() => {
+      // Non-blocking background push
+    });
+  } catch (e) {
+    // Non-blocking
+  }
+}
+
+// Broadcast to local tabs + Cloud Relay
+function broadcast(type, payload) {
+  notifyLocal(type, payload);
+  pushToCloud(type, payload);
+}
+
+// Cloud WebSocket & Polling Manager
+let cloudWs = null;
+let reconnectTimeout = null;
+let isCloudInitialized = false;
+
+function initCloudSync() {
+  if (typeof window === "undefined" || isCloudInitialized) return;
+  isCloudInitialized = true;
+
+  // 1. Initial Cloud History Pull to catch up on any existing teams & states
+  mockSync.pullFromCloud();
+
+  // 2. Setup WebSocket for real-time live events across devices
+  function connectWs() {
+    try {
+      if (cloudWs) {
+        try { cloudWs.close(); } catch(e) {}
+      }
+
+      cloudWs = new WebSocket(CLOUD_WS_URL);
+
+      cloudWs.onopen = () => {
+        console.log("⚡ CONNEXION: Multi-device cloud sync connected!");
+      };
+
+      cloudWs.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.event === "message" && data.message) {
+            const parsed = typeof data.message === "string" ? JSON.parse(data.message) : data.message;
+            if (parsed && parsed.senderId !== CLIENT_INSTANCE_ID) {
+              mockSync.applyRemoteEvent(parsed, true);
+            }
+          }
+        } catch (e) {}
+      };
+
+      cloudWs.onerror = () => {};
+
+      cloudWs.onclose = () => {
+        if (!reconnectTimeout) {
+          reconnectTimeout = setTimeout(() => {
+            reconnectTimeout = null;
+            connectWs();
+          }, 3000);
+        }
+      };
+    } catch (e) {
+      console.warn("WebSocket init failed, fallback to polling:", e);
+    }
+  }
+
+  connectWs();
+
+  // 3. Auto-sync on window focus & mobile screen resume
+  window.addEventListener("focus", () => mockSync.pullFromCloud());
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) mockSync.pullFromCloud();
+  });
+
+  // 4. Background heartbeat poll (every 12s) to safeguard against mobile sleep
+  setInterval(() => {
+    mockSync.pullFromCloud();
+  }, 12000);
 }
 
 // Ensure Initial Seed & Auto-Upgrade to Tamil Connection Bank
@@ -100,15 +240,9 @@ export function initializeStorage() {
   if (!localStorage.getItem(STORAGE_KEYS.SUBMISSIONS)) {
     save(STORAGE_KEYS.SUBMISSIONS, {});
   }
-}
 
-// Broadcast an event to all tabs
-function broadcast(type, payload) {
-  if (broadcastChannel) {
-    broadcastChannel.postMessage({ type, payload, timestamp: Date.now() });
-  }
-  // Also dispatch window custom event for current tab
-  window.dispatchEvent(new CustomEvent("cnx_sync_event", { detail: { type, payload } }));
+  // Start cloud synchronization
+  initCloudSync();
 }
 
 // ================= SYNC LISTENERS & MANAGERS =================
@@ -116,7 +250,129 @@ function broadcast(type, payload) {
 export const mockSync = {
   initializeStorage,
 
-  // Listen for broadcast messages across tabs
+  // Pull past events from cloud relay (12h retention)
+  async pullFromCloud() {
+    if (typeof window === "undefined") return;
+    try {
+      const res = await fetch(`${CLOUD_HTTP_URL}/json?poll=1&since=12h`, {
+        headers: { "Accept": "application/x-ndjson, text/plain" }
+      });
+      if (!res.ok) return;
+      const text = await res.text();
+      if (!text) return;
+      const lines = text.trim().split("\n");
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const row = JSON.parse(line);
+          if (row.event === "message" && row.message) {
+            const data = typeof row.message === "string" ? JSON.parse(row.message) : row.message;
+            if (data && data.senderId !== CLIENT_INSTANCE_ID && data.type) {
+              this.applyRemoteEvent(data, false);
+            }
+          }
+        } catch (e) {}
+      }
+      // Notify once after bulk catch-up
+      notifyLocal("TEAMS_UPDATED", this.getTeams());
+      notifyLocal("ROUND_STATE_UPDATED", this.getRoundState());
+    } catch (e) {
+      console.warn("Cloud poll warning:", e);
+    }
+  },
+
+  // Apply an event received from another device
+  applyRemoteEvent(eventData, shouldNotify = true) {
+    const { type, payload } = eventData;
+    if (!type) return;
+
+    if (type === "TEAM_REGISTERED" || type === "TEAM_UPDATED") {
+      const incomingTeam = payload?.team || payload;
+      if (incomingTeam && incomingTeam.id) {
+        const teams = load(STORAGE_KEYS.TEAMS, []);
+        const idx = teams.findIndex(t => t.id === incomingTeam.id || t.teamName.toLowerCase() === (incomingTeam.teamName || "").toLowerCase());
+        if (idx >= 0) {
+          teams[idx] = { ...teams[idx], ...incomingTeam };
+        } else {
+          teams.push(incomingTeam);
+        }
+        save(STORAGE_KEYS.TEAMS, teams);
+        if (shouldNotify) {
+          notifyLocal("TEAM_UPDATED", { team: incomingTeam });
+          notifyLocal("TEAMS_UPDATED", teams);
+        }
+      }
+    } else if (type === "TEAMS_UPDATED") {
+      const incomingTeams = payload?.teams || (Array.isArray(payload) ? payload : null);
+      if (Array.isArray(incomingTeams)) {
+        const currentTeams = load(STORAGE_KEYS.TEAMS, []);
+        const map = new Map();
+        currentTeams.forEach(t => map.set(t.id, t));
+        incomingTeams.forEach(t => {
+          if (map.has(t.id)) {
+            map.set(t.id, { ...map.get(t.id), ...t });
+          } else {
+            map.set(t.id, t);
+          }
+        });
+        const merged = Array.from(map.values());
+        save(STORAGE_KEYS.TEAMS, merged);
+        if (shouldNotify) notifyLocal("TEAMS_UPDATED", merged);
+      }
+    } else if (type === "ROUND_STATE_UPDATED") {
+      const incomingRound = payload?.roundState || payload;
+      if (incomingRound) {
+        const current = load(STORAGE_KEYS.ROUND_STATE, DEFAULT_ROUND_STATE);
+        const updated = { ...current, ...incomingRound };
+        save(STORAGE_KEYS.ROUND_STATE, updated);
+        if (shouldNotify) notifyLocal("ROUND_STATE_UPDATED", updated);
+      }
+    } else if (type === "BUZZER_ARMED" || type === "BUZZER_RESET" || type === "BUZZER_PRESSED") {
+      const buzzer = payload?.buzzerState || payload;
+      if (buzzer) {
+        save(STORAGE_KEYS.BUZZER, buzzer);
+        if (shouldNotify) notifyLocal(type, payload);
+      }
+    } else if (type === "SUBMISSION_RECORDED") {
+      const { questionId, submission } = payload || {};
+      if (questionId && submission) {
+        const allSubs = load(STORAGE_KEYS.SUBMISSIONS, {});
+        if (!allSubs[questionId]) allSubs[questionId] = [];
+        const idx = allSubs[questionId].findIndex(s => s.teamId === submission.teamId);
+        if (idx >= 0) allSubs[questionId][idx] = submission;
+        else allSubs[questionId].push(submission);
+        save(STORAGE_KEYS.SUBMISSIONS, allSubs);
+        if (shouldNotify) notifyLocal("SUBMISSION_RECORDED", payload);
+      }
+    } else if (type === "SCORE_LOGGED") {
+      const entry = payload?.entry || payload;
+      if (entry && entry.id) {
+        const log = load(STORAGE_KEYS.SCORE_LOG, []);
+        if (!log.some(e => e.id === entry.id)) {
+          log.unshift(entry);
+          save(STORAGE_KEYS.SCORE_LOG, log);
+          if (shouldNotify) notifyLocal("SCORE_LOGGED", entry);
+        }
+      }
+    } else if (type === "GAME_RESET") {
+      save(STORAGE_KEYS.ROUND_STATE, DEFAULT_ROUND_STATE);
+      save(STORAGE_KEYS.BUZZER, DEFAULT_BUZZER_STATE);
+      save(STORAGE_KEYS.SCORE_LOG, []);
+      save(STORAGE_KEYS.SUBMISSIONS, {});
+      const teams = load(STORAGE_KEYS.TEAMS, []).map(t => ({
+        ...t, score: 0, totalResponseTime: 0, answerCount: 0, round2Group: null, qualifiedRound2: false, qualifiedFinal: false, finalRank: null
+      }));
+      save(STORAGE_KEYS.TEAMS, teams);
+      if (shouldNotify) {
+        notifyLocal("GAME_RESET", {});
+        notifyLocal("ROUND_STATE_UPDATED", DEFAULT_ROUND_STATE);
+        notifyLocal("BUZZER_RESET", DEFAULT_BUZZER_STATE);
+        notifyLocal("TEAMS_UPDATED", teams);
+      }
+    }
+  },
+
+  // Listen for broadcast messages across tabs & devices
   onEvent(handler) {
     const channelHandler = (event) => {
       handler(event.data);
@@ -128,13 +384,17 @@ export const mockSync = {
     if (broadcastChannel) {
       broadcastChannel.addEventListener("message", channelHandler);
     }
-    window.addEventListener("cnx_sync_event", windowHandler);
+    if (typeof window !== "undefined") {
+      window.addEventListener("cnx_sync_event", windowHandler);
+    }
 
     return () => {
       if (broadcastChannel) {
         broadcastChannel.removeEventListener("message", channelHandler);
       }
-      window.removeEventListener("cnx_sync_event", windowHandler);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("cnx_sync_event", windowHandler);
+      }
     };
   },
 
@@ -147,7 +407,7 @@ export const mockSync = {
     const current = this.getRoundState();
     const updated = { ...current, ...updates };
     save(STORAGE_KEYS.ROUND_STATE, updated);
-    broadcast("ROUND_STATE_UPDATED", updated);
+    broadcast("ROUND_STATE_UPDATED", { roundState: updated });
     return updated;
   },
 
@@ -179,22 +439,53 @@ export const mockSync = {
 
   registerTeam(teamData) {
     const teams = this.getTeams();
-    const existingIndex = teams.findIndex(t => t.id === teamData.id || t.teamName.toLowerCase() === teamData.teamName.toLowerCase());
+    const trimmedTeamName = (teamData.teamName || "").trim();
+    const existingIndex = teams.findIndex(
+      t => (teamData.id && t.id === teamData.id) || 
+           t.teamName.toLowerCase() === trimmedTeamName.toLowerCase()
+    );
+
+    const cleanLeader = (teamData.leaderName || (teamData.members && teamData.members[0]) || "").trim();
+    const rawMembers = Array.isArray(teamData.members) && teamData.members.length > 0
+      ? teamData.members.map(m => (m || "").trim()).filter(Boolean)
+      : [cleanLeader].filter(Boolean);
+
+    const membersList = rawMembers.includes(cleanLeader) ? rawMembers : [cleanLeader, ...rawMembers];
+
+    if (existingIndex >= 0) {
+      // Existing team found: update details and return
+      const existing = teams[existingIndex];
+      const updated = {
+        ...existing,
+        collegeName: (teamData.collegeName || existing.collegeName || "").trim(),
+        leaderName: cleanLeader || existing.leaderName,
+        members: membersList.length > 0 ? membersList : existing.members,
+        contactEmail: teamData.contactEmail || existing.contactEmail || "",
+        contactPhone: teamData.contactPhone || existing.contactPhone || "",
+        lastActive: Date.now()
+      };
+      teams[existingIndex] = updated;
+      save(STORAGE_KEYS.TEAMS, teams);
+      broadcast("TEAM_UPDATED", { team: updated });
+      return updated;
+    }
+
+    const assignedCode = teamData.teamCode || generateTeamCode(teams);
 
     const newTeam = {
       id: teamData.id || `team_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-      teamName: teamData.teamName.trim(),
-      teamCode: teamData.teamCode || generateTeamCode(teams),
-      leaderName: (teamData.leaderName || (teamData.members && teamData.members[0]) || "").trim(),
-      collegeName: teamData.collegeName.trim(),
-      members: teamData.members || [],
+      teamName: trimmedTeamName,
+      teamCode: assignedCode,
+      leaderName: cleanLeader,
+      collegeName: (teamData.collegeName || "").trim(),
+      members: membersList,
       contactEmail: teamData.contactEmail || "",
       contactPhone: teamData.contactPhone || "",
       score: 0,
       totalResponseTime: 0,
       answerCount: 0,
       currentRound: 1,
-      round2Group: null, // "A", "B", "C"
+      round2Group: null,
       qualifiedRound2: false,
       qualifiedFinal: false,
       finalRank: null,
@@ -202,48 +493,89 @@ export const mockSync = {
       lastActive: Date.now()
     };
 
-    if (existingIndex >= 0) {
-      // Return existing team session
-      return teams[existingIndex];
-    }
-
     teams.push(newTeam);
     save(STORAGE_KEYS.TEAMS, teams);
-    broadcast("TEAMS_UPDATED", teams);
+    broadcast("TEAM_REGISTERED", { team: newTeam });
     return newTeam;
   },
 
-  
-  joinTeamByCode(registeredName, teamCode) {
-    const teams = this.getTeams();
-    const cleanCode = (teamCode || "").trim().toUpperCase();
-    const cleanName = (registeredName || "").trim().toLowerCase();
+  /**
+   * Teammate Join with Code & Registered Name
+   * Features:
+   * 1. Auto-pulls latest teams from Cloud Relay
+   * 2. Tolerant code matching (e.g. 4821, CNX-4821, cnx 4821)
+   * 3. Flexible name matching (case-insensitive, substring, leader name)
+   * 4. Auto-enrolls new teammate into team if code is valid and slots are available (< 3 members)
+   */
+  async joinTeamByCode(registeredName, teamCode) {
+    // 1. Immediately pull fresh cloud data in case another device registered
+    await this.pullFromCloud();
 
-    if (!cleanCode) {
-      return { success: false, message: "Please enter the Unique Team Code." };
+    const teams = this.getTeams();
+    const cleanInputName = (registeredName || "").trim();
+    const cleanInputCode = (teamCode || "").trim();
+
+    if (!cleanInputCode) {
+      return { success: false, message: "Please enter your 4-digit Team Code (e.g. 4821 or CNX-4821)." };
     }
-    if (!cleanName) {
+    if (!cleanInputName) {
       return { success: false, message: "Please enter your Registered Name." };
     }
 
-    const team = teams.find(t => {
-      const codeMatch = (t.teamCode || "").toUpperCase() === cleanCode;
-      const isMemberMatch = Array.isArray(t.members) && t.members.some(
-        m => (m || "").trim().toLowerCase() === cleanName
-      );
-      const isLeaderMatch = (t.leaderName || "").trim().toLowerCase() === cleanName;
-      const isTeamNameMatch = (t.teamName || "").trim().toLowerCase() === cleanName;
-      return codeMatch && (isMemberMatch || isLeaderMatch || isTeamNameMatch);
-    });
+    // Match team by normalized code
+    const matchedTeam = teams.find(t => isCodeMatch(cleanInputCode, t.teamCode));
 
-    if (!team) {
+    if (!matchedTeam) {
       return { 
         success: false, 
-        message: `No matching team found for code "${cleanCode}" with registered name "${registeredName}". Please verify your name was registered by your Team Leader.` 
+        message: `No team found for code "${cleanInputCode}". Please ask your Team Leader for the 4-digit code shown on their screen.` 
       };
     }
 
-    return { success: true, team };
+    // Team code is valid! Now verify name
+    const lowerInputName = cleanInputName.toLowerCase();
+    const currentMembers = Array.isArray(matchedTeam.members) ? [...matchedTeam.members] : [];
+
+    const isLeader = (matchedTeam.leaderName || "").trim().toLowerCase() === lowerInputName;
+    const isTeamName = (matchedTeam.teamName || "").trim().toLowerCase() === lowerInputName;
+
+    const memberIndex = currentMembers.findIndex(m => {
+      const cleanM = (m || "").trim().toLowerCase();
+      if (!cleanM) return false;
+      if (cleanM === lowerInputName) return true;
+      if (cleanM.length > 2 && lowerInputName.length > 2) {
+        if (cleanM.includes(lowerInputName) || lowerInputName.includes(cleanM)) return true;
+      }
+      return false;
+    });
+
+    if (isLeader || isTeamName || memberIndex >= 0) {
+      // Recognized member of team!
+      return {
+        success: true,
+        team: matchedTeam,
+        message: `Welcome, ${cleanInputName}! Connected to team ${matchedTeam.teamName}.`
+      };
+    }
+
+    // Not in existing members list, but valid team code!
+    // If team has fewer than 3 members, auto-enroll this teammate!
+    if (currentMembers.length < 3) {
+      currentMembers.push(cleanInputName);
+      matchedTeam.members = currentMembers;
+      this.updateTeam(matchedTeam.id, { members: currentMembers });
+      return {
+        success: true,
+        team: matchedTeam,
+        message: `Successfully enrolled and connected to team ${matchedTeam.teamName}!`
+      };
+    }
+
+    // Team is already full (3 members) and name did not match
+    return {
+      success: false,
+      message: `Team "${matchedTeam.teamName}" is already full with 3 members (${currentMembers.join(", ")}). Please enter one of the registered member names.`
+    };
   },
 
   updateTeam(teamId, updates) {
@@ -252,7 +584,7 @@ export const mockSync = {
     if (index >= 0) {
       teams[index] = { ...teams[index], ...updates, lastActive: Date.now() };
       save(STORAGE_KEYS.TEAMS, teams);
-      broadcast("TEAMS_UPDATED", teams);
+      broadcast("TEAM_UPDATED", { team: teams[index] });
       return teams[index];
     }
     return null;

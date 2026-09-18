@@ -55,7 +55,12 @@ export function subscribeTeam(teamId, callback) {
 
   callback(mockSync.getTeam(teamId));
   return mockSync.onEvent((event) => {
-    if (event.type === "TEAMS_UPDATED" || event.type === "GAME_RESET") {
+    if (
+      event.type === "TEAMS_UPDATED" || 
+      event.type === "TEAM_UPDATED" || 
+      event.type === "TEAM_REGISTERED" || 
+      event.type === "GAME_RESET"
+    ) {
       callback(mockSync.getTeam(teamId));
     }
   });
@@ -76,7 +81,13 @@ export function subscribeTeams(callback) {
 
   callback(computeRankings(mockSync.getTeams()));
   return mockSync.onEvent((event) => {
-    if (event.type === "TEAMS_UPDATED" || event.type === "GAME_RESET" || event.type === "SCORE_LOGGED") {
+    if (
+      event.type === "TEAMS_UPDATED" || 
+      event.type === "TEAM_REGISTERED" || 
+      event.type === "TEAM_UPDATED" || 
+      event.type === "GAME_RESET" || 
+      event.type === "SCORE_LOGGED"
+    ) {
       callback(computeRankings(mockSync.getTeams()));
     }
   });
@@ -215,5 +226,5 @@ export function resetGame() {
   return mockSync.resetGame();
 }
 export async function joinTeamByCode(registeredName, teamCode) {
-  return mockSync.joinTeamByCode(registeredName, teamCode);
+  return await mockSync.joinTeamByCode(registeredName, teamCode);
 }

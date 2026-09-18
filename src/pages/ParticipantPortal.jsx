@@ -47,6 +47,7 @@ export default function ParticipantPortal() {
   });
 
   const [authError, setAuthError] = useState("");
+  const [isJoining, setIsJoining] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [typedAnswer, setTypedAnswer] = useState("");
   const [submittedAnswer, setSubmittedAnswer] = useState(null);
@@ -93,17 +94,28 @@ export default function ParticipantPortal() {
     e.preventDefault();
     setAuthError("");
 
-    if (!joinData.registeredName.trim() || !joinData.teamCode.trim()) {
+    const cleanName = joinData.registeredName.trim();
+    const cleanCode = joinData.teamCode.trim();
+
+    if (!cleanName || !cleanCode) {
       setAuthError("Please enter both your Registered Name and Team Code.");
       return;
     }
 
-    const res = await joinTeam(joinData.registeredName.trim(), joinData.teamCode.trim());
-    if (res.success) {
-      playCorrect();
-    } else {
-      setAuthError(res.message || "Failed to join team. Please verify your registered name and team code.");
+    setIsJoining(true);
+    try {
+      const res = await joinTeam(cleanName, cleanCode);
+      if (res.success) {
+        playCorrect();
+      } else {
+        setAuthError(res.message || "Failed to join team. Please verify your registered name and team code.");
+        playWrong();
+      }
+    } catch (err) {
+      setAuthError("Could not connect to team session. Please check your network and try again.");
       playWrong();
+    } finally {
+      setIsJoining(false);
     }
   };
 
@@ -361,11 +373,12 @@ export default function ParticipantPortal() {
                 /* TAB 2: TEAMMATE QUICK JOIN WITH CODE & REGISTERED NAME */
                 <form onSubmit={handleJoin} className="space-y-4 py-2">
                   <div className="p-3.5 rounded-2xl bg-purple-50/80 border border-purple-200 text-xs text-purple-950 space-y-1">
-                    <p className="font-bold">
-                      👥 Joining an existing registered team?
+                    <p className="font-bold flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                      <span>Joining an existing team session?</span>
                     </p>
                     <p className="text-[11px] text-slate-600">
-                      Enter your <strong>Registered Name</strong> (as registered by your Team Leader) and the <strong>Unique Team Code</strong>.
+                      Enter your <strong>Registered Name</strong> and the <strong>Unique Team Code</strong> (e.g. 4-digit code like <strong>4821</strong> or <strong>CNX-4821</strong>) given by your Team Leader.
                     </p>
                   </div>
 
@@ -373,7 +386,7 @@ export default function ParticipantPortal() {
                   <div>
                     <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5 flex items-center gap-1.5">
                       <UserCheck className="w-4 h-4 text-purple-600" />
-                      <span>Registered Name *</span>
+                      <span>Your Name / Registered Name *</span>
                     </label>
                     <input
                       type="text"
@@ -387,14 +400,17 @@ export default function ParticipantPortal() {
 
                   {/* Unique Team Code Input */}
                   <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5 flex items-center gap-1.5">
-                      <KeyRound className="w-4 h-4 text-pink-600" />
-                      <span>Unique Team Code *</span>
+                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <KeyRound className="w-4 h-4 text-pink-600" />
+                        <span>Unique Team Code *</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-semibold">e.g. 4821 or CNX-4821</span>
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. CNX-4821"
+                      placeholder="e.g. 4821 or CNX-4821"
                       value={joinData.teamCode}
                       onChange={(e) => setJoinData({ ...joinData, teamCode: e.target.value.toUpperCase() })}
                       className="w-full px-4 py-3 rounded-2xl bg-slate-50 border-2 border-purple-200 text-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-purple-600 focus:bg-white font-mono font-black uppercase tracking-widest text-center"
@@ -403,10 +419,20 @@ export default function ParticipantPortal() {
 
                   <button
                     type="submit"
-                    className="w-full mt-4 py-3.5 px-5 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-95 text-white shadow-xl shadow-purple-600/30 transition-all flex items-center justify-center gap-2"
+                    disabled={isJoining}
+                    className="w-full mt-4 py-3.5 px-5 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-95 text-white shadow-xl shadow-purple-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
                   >
-                    <span>Connect to Team Session</span>
-                    <ArrowRight className="w-4 h-4" />
+                    {isJoining ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Connecting to Team Session...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Connect to Team Session</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 </form>
               )}

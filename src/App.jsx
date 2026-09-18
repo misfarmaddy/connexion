@@ -15,7 +15,7 @@ function AppContent() {
   const isDisplayRoute = location.pathname === "/display";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50/70 via-purple-50/50 to-pink-50/60 text-slate-900 flex flex-col font-['Outfit',sans-serif]">
+    <div className="min-h-screen bg-[#0d0f22] text-slate-100 flex flex-col font-['Outfit',sans-serif] relative selection:bg-purple-600 selection:text-white">
       {/* Symposium Header with SRM + CASYUM'26 branding across ALL pages */}
       <SymposiumHeader isDisplayView={isDisplayRoute} />
 
@@ -30,7 +30,7 @@ function AppContent() {
       </main>
 
       {!isDisplayRoute && (
-        <footer className="py-4 border-t border-purple-100 bg-white/70 text-center text-xs text-slate-500 font-medium">
+        <footer className="py-4 border-t border-purple-900/40 bg-slate-950/60 backdrop-blur-md text-center text-xs text-purple-300/80 font-medium relative z-10">
           CASYUM'26 &bull; CONNEXION Image-Connection Quiz &bull; SRM Institute of Science and Technology, Ramapuram, Chennai
         </footer>
       )}

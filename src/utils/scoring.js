@@ -14,30 +14,91 @@ export function normalizeAnswer(str) {
 }
 
 /**
+ * Phonetic transliteration helper for common Tamil-English spelling variances
+ */
+function phoneticSimplify(str) {
+  if (!str) return "";
+  return str
+    .replace(/th/g, "t")
+    .replace(/dh/g, "d")
+    .replace(/ee/g, "i")
+    .replace(/oo/g, "u")
+    .replace(/aa/g, "a")
+    .replace(/zh/g, "l")
+    .replace(/ck/g, "k");
+}
+
+/**
  * Checks if a submitted answer matches the correct answer or any valid alias
+ * Tolerant to:
+ * - Casing (uppercase/lowercase)
+ * - Spacing mistakes (missing spaces, extra spaces, connected words)
+ * - Minor spelling typos (Levenshtein distance 1-2)
+ * - Common suffixes/prefixes ("movie", "film", "the", "dr", "sir")
+ * - Tamil phonetic transliterations
  */
 export function isAnswerCorrect(submitted, correctAnswer, aliases = []) {
   const cleanSubmitted = normalizeAnswer(submitted);
   if (!cleanSubmitted) return false;
 
-  const validOptions = [correctAnswer, ...(aliases || [])].map(normalizeAnswer);
+  // Build list of valid targets
+  const rawTargets = [correctAnswer, ...(aliases || [])].filter(Boolean);
+  const validOptions = rawTargets.map(normalizeAnswer);
 
-  // Direct match
+  // 1. Direct normalized match
   if (validOptions.includes(cleanSubmitted)) return true;
 
-  // Substring / containment match if length is reasonable
+  // 2. Space-stripped match (e.g. "leo das" === "leodas", "anirudh ravichander" === "anirudhravichander")
+  const noSpaceSubmitted = cleanSubmitted.replace(/\s+/g, "");
+  const noSpaceOptions = validOptions.map(opt => opt.replace(/\s+/g, ""));
+  if (noSpaceOptions.includes(noSpaceSubmitted)) return true;
+
+  // 3. Prefix / Suffix stripped match (e.g., "leo movie" -> "leo", "the jailer" -> "jailer")
+  const strippedSubmitted = cleanSubmitted
+    .replace(/^(the|a|an|dr|mr)\s+/, "")
+    .replace(/\s+(movie|film|cinema|sir)$/, "")
+    .trim();
+  if (strippedSubmitted && validOptions.includes(strippedSubmitted)) return true;
+  if (strippedSubmitted && noSpaceOptions.includes(strippedSubmitted.replace(/\s+/g, ""))) return true;
+
+  // 4. Substring / Containment match if length is reasonable
   for (const opt of validOptions) {
-    if (opt.length >= 4 && cleanSubmitted.length >= 4) {
-      if (opt.includes(cleanSubmitted) || cleanSubmitted.includes(opt)) {
+    if (opt.length >= 3 && cleanSubmitted.length >= 3) {
+      if (opt === cleanSubmitted || opt.includes(cleanSubmitted) || cleanSubmitted.includes(opt)) {
         return true;
       }
     }
   }
 
-  // Levenshtein / Edit distance tolerance for minor typos (1 typo allowed for words > 5 chars)
+  // 5. Significant word token match (e.g. submitted "parthiban" or "kalam" or "gukesh" or "vadivelu")
+  const submittedWords = cleanSubmitted.split(" ").filter(w => w.length >= 3);
   for (const opt of validOptions) {
-    if (opt.length > 5 && getEditDistance(cleanSubmitted, opt) <= 1) {
-      return true;
+    const optWords = opt.split(" ").filter(w => w.length >= 3);
+    for (const sw of submittedWords) {
+      if (optWords.includes(sw)) return true;
+      // Match with 1 typo on significant word of 5+ chars
+      if (sw.length >= 5 && optWords.some(ow => ow.length >= 5 && getEditDistance(sw, ow) <= 1)) {
+        return true;
+      }
+    }
+  }
+
+  // 6. Phonetic transliteration match
+  const phonSubmitted = phoneticSimplify(noSpaceSubmitted);
+  for (const opt of noSpaceOptions) {
+    if (phoneticSimplify(opt) === phonSubmitted) return true;
+  }
+
+  // 7. Levenshtein edit distance tolerance for minor typos:
+  // - 1 typo allowed for 4-6 char words
+  // - 2 typos allowed for 7+ char words
+  for (const opt of validOptions) {
+    const noSpaceOpt = opt.replace(/\s+/g, "");
+    const maxLen = Math.max(noSpaceSubmitted.length, noSpaceOpt.length);
+    if (maxLen >= 4 && maxLen <= 6) {
+      if (getEditDistance(noSpaceSubmitted, noSpaceOpt) <= 1) return true;
+    } else if (maxLen >= 7) {
+      if (getEditDistance(noSpaceSubmitted, noSpaceOpt) <= 2) return true;
     }
   }
 

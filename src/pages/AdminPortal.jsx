@@ -267,7 +267,7 @@ export default function AdminPortal() {
     alert(`Auto-Scoring Completed! Correct: ${result.correctCount} | Wrong: ${result.wrongCount} | Total: ${result.total}`);
   };
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = (autoStartTimer = false) => {
     if (roundState.currentRound === 1) {
       // Auto-score pending submissions if any exist
       if (currentSubmissions.length > 0 && roundState.status !== "waiting") {
@@ -278,13 +278,21 @@ export default function AdminPortal() {
       const curIdx = coreQuestions.findIndex(q => q.id === roundState.currentQuestionId);
 
       let nextQ = null;
-      if (curIdx >= 0 && curIdx < coreQuestions.length - 1) {
+      if (curIdx === -1) {
+        // If current question is missing or not in core list, start from Question 1
+        nextQ = coreQuestions[0] || round1Questions[0];
+      } else if (curIdx < coreQuestions.length - 1) {
+        // Advance to next core question
         nextQ = coreQuestions[curIdx + 1];
       } else {
+        // Reached end of core questions: check backup pool first, else cycle back to Q1
         const fullList = round1Questions.filter(q => !q.isSuddenDeath);
         const fullIdx = fullList.findIndex(q => q.id === roundState.currentQuestionId);
         if (fullIdx >= 0 && fullIdx < fullList.length - 1) {
           nextQ = fullList[fullIdx + 1];
+        } else {
+          // Wrap around safely so admin never gets blocked
+          nextQ = coreQuestions[0] || round1Questions[0];
         }
       }
 
@@ -292,46 +300,60 @@ export default function AdminPortal() {
         updateRoundState({
           currentRound: 1,
           currentQuestionId: nextQ.id,
-          status: "waiting",
+          status: autoStartTimer ? "live" : "waiting",
           duration: 30,
-          questionStartTimestamp: null
+          questionStartTimestamp: autoStartTimer ? Date.now() : null
         });
         playTick();
-      } else {
-        alert("🎉 You have reached the end of Round 1 Core Questions (10/10)! You can now Compute Top 15 Qualifiers or select a backup question.");
       }
     } else if (roundState.currentRound === 2) {
       const grpPool = round2Questions.filter(q => q.group === roundState.activeGroup);
       const curIdx = grpPool.findIndex(q => q.id === roundState.currentQuestionId);
-      if (curIdx >= 0 && curIdx < grpPool.length - 1) {
-        const nextQ = grpPool[curIdx + 1];
+      let nextQ = null;
+      if (curIdx === -1) {
+        nextQ = grpPool[0] || round2Questions[0];
+      } else if (curIdx < grpPool.length - 1) {
+        nextQ = grpPool[curIdx + 1];
+      } else {
+        nextQ = grpPool[0]; // loop safely
+      }
+      if (nextQ) {
         updateRoundState({
+          currentRound: 2,
           currentQuestionId: nextQ.id,
-          status: "waiting",
+          status: autoStartTimer ? "live" : "waiting",
           duration: 20,
-          questionStartTimestamp: null
+          questionStartTimestamp: autoStartTimer ? Date.now() : null
         });
         resetBuzzer();
         playTick();
-      } else {
-        alert(`Finished all 10 questions for Group ${roundState.activeGroup}! Switch to the next group.`);
       }
     } else if (roundState.currentRound === 3) {
       const curIdx = round3Questions.findIndex(q => q.id === roundState.currentQuestionId);
-      if (curIdx >= 0 && curIdx < round3Questions.length - 1) {
-        const nextQ = round3Questions[curIdx + 1];
+      let nextQ = null;
+      if (curIdx === -1) {
+        nextQ = round3Questions[0];
+      } else if (curIdx < round3Questions.length - 1) {
+        nextQ = round3Questions[curIdx + 1];
+      } else {
+        nextQ = round3Questions[0]; // loop safely
+      }
+      if (nextQ) {
         updateRoundState({
+          currentRound: 3,
           currentQuestionId: nextQ.id,
-          status: "waiting",
+          status: autoStartTimer ? "live" : "waiting",
           duration: 20,
-          questionStartTimestamp: null
+          questionStartTimestamp: autoStartTimer ? Date.now() : null
         });
         resetBuzzer();
         playTick();
-      } else {
-        alert("Grand Finals questions completed!");
       }
     }
+  };
+
+  const handleNextAndStartTimer = () => {
+    handleNextQuestion(true);
   };
 
   const handleLockTop15 = () => {
@@ -478,8 +500,10 @@ export default function AdminPortal() {
 
   const currentR1Core = round1Questions.filter(q => !q.isBackup && !q.isSuddenDeath);
   const currentR1Idx = currentR1Core.findIndex(q => q.id === roundState.currentQuestionId);
-  const nextR1QNum = currentR1Idx >= 0 && currentR1Idx < currentR1Core.length - 1 ? currentR1Idx + 2 : null;
-  const currentR1QNum = currentR1Idx >= 0 ? currentR1Idx + 1 : null;
+  const currentR1QNum = currentR1Idx >= 0 ? currentR1Idx + 1 : 1;
+  const nextR1QNum = currentR1Idx >= 0 && currentR1Idx < currentR1Core.length - 1 
+    ? currentR1Idx + 2 
+    : (currentR1Idx >= currentR1Core.length - 1 ? 1 : 2);
 
   return (
     <div className="relative min-h-screen">
@@ -724,17 +748,25 @@ export default function AdminPortal() {
                         {roundState.status !== "revealed" && (
                           <button
                             onClick={handleRevealAnswer}
-                            className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm cursor-pointer"
+                            className="px-3.5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm cursor-pointer"
                           >
                             <Eye className="w-3.5 h-3.5" />
                             <span>Reveal Answer</span>
                           </button>
                         )}
                         <button
-                          onClick={handleNextQuestion}
-                          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-purple-500/25 ring-2 ring-amber-400 dark:ring-amber-500 cursor-pointer"
+                          onClick={handleNextAndStartTimer}
+                          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-500/25 ring-2 ring-emerald-400 cursor-pointer animate-pulse"
+                          title="Advances to next question AND starts the 30s countdown immediately!"
                         >
-                          <span>Next Question {nextR1QNum ? `(Q${nextR1QNum}/10)` : ""}</span>
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                          <span>Next &amp; Start 30s (Q{nextR1QNum}/10)</span>
+                        </button>
+                        <button
+                          onClick={() => handleNextQuestion(false)}
+                          className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer"
+                        >
+                          <span>Next (Prepare)</span>
                           <ArrowRight className="w-4 h-4" />
                         </button>
                       </div>
@@ -742,20 +774,23 @@ export default function AdminPortal() {
                   )}
 
                   <div className="flex flex-wrap gap-2.5 pt-2">
-                    <button onClick={handleStartTimer} className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
+                    <button onClick={handleNextAndStartTimer} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-600/30 cursor-pointer">
+                      <Play className="w-4 h-4 fill-current" /> Next &amp; Start 30s (Q{nextR1QNum}/10)
+                    </button>
+                    <button onClick={handleStartTimer} className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
                       <Play className="w-4 h-4 fill-current" /> Start 30s Timer
                     </button>
-                    <button onClick={handleForceEnd} className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
+                    <button onClick={handleForceEnd} className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
                       <Square className="w-4 h-4 fill-current" /> Force End &amp; Lock
                     </button>
-                    <button onClick={handleRevealAnswer} className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
+                    <button onClick={handleRevealAnswer} className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
                       <Eye className="w-4 h-4" /> Reveal Answer
                     </button>
-                    <button onClick={handleAutoScore} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
+                    <button onClick={handleAutoScore} className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
                       <Zap className="w-4 h-4 fill-current text-yellow-200" /> Auto-Score Submissions ({currentSubmissions.length})
                     </button>
-                    <button onClick={handleNextQuestion} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md shadow-purple-600/20 cursor-pointer">
-                      <span>Next Question {nextR1QNum ? `(Q${nextR1QNum}/10)` : ""}</span>
+                    <button onClick={() => handleNextQuestion(false)} className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md shadow-purple-600/20 cursor-pointer">
+                      <span>Next (Prepare)</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>

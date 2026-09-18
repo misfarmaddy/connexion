@@ -21,10 +21,10 @@ export default function SymposiumHeader({ isDisplayView = false }) {
   };
 
   return (
-    <header className="bg-white/95 backdrop-blur-md border-b-2 border-purple-200/80 shadow-sm sticky top-0 z-50">
+    <header className="w-full relative z-20 bg-transparent pt-3 pb-1 transition-all">
       
       {/* 1. TOP BRANDING ROW (SRM - CONNEXION - CASYUM'26) */}
-      <div className="max-w-7xl mx-auto px-4 py-2.5 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-3 border-b border-purple-100">
+      <div className="max-w-7xl mx-auto px-4 py-2 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-3">
         
         {/* TOP-LEFT: Official SRM Institute of Science and Technology Logo */}
         <div className="flex items-center group flex-shrink-0">
@@ -134,14 +134,14 @@ export default function SymposiumHeader({ isDisplayView = false }) {
               </div>
             )}
 
-            <nav className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <nav className="flex items-center gap-1.5 bg-white/90 backdrop-blur-xs p-1 rounded-xl border border-purple-200/80 shadow-sm">
               <Link
                 to="/"
                 onClick={() => playTick()}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-black transition-all ${
                   location.pathname === "/"
                     ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md shadow-purple-500/20"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-white"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-purple-50"
                 }`}
               >
                 <Users className="w-4 h-4" />
@@ -164,10 +164,10 @@ export default function SymposiumHeader({ isDisplayView = false }) {
                 playTick();
               }}
               title={isMuted ? "Unmute Sound Effects" : "Mute Sound Effects"}
-              className={`p-2 rounded-xl border transition-all ${
+              className={`p-2 rounded-xl border transition-all shadow-sm ${
                 isMuted
-                  ? "bg-slate-100 text-slate-400 border-slate-200"
-                  : "bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200 shadow-sm"
+                  ? "bg-white/80 text-slate-400 border-purple-200 hover:bg-white"
+                  : "bg-white/90 text-purple-800 border-purple-300 hover:bg-purple-100"
               }`}
             >
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}

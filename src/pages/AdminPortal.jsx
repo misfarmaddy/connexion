@@ -114,7 +114,7 @@ export default function AdminPortal() {
   // ================= 1. ADMIN LOGIN GATE VIEW =================
   if (!isAdmin) {
     return (
-      <div className="relative min-h-[85vh] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+      <div className="relative flex items-center justify-center px-4 py-4 sm:py-8">
         <BackgroundCanvas />
 
         <div className="relative z-10 w-full max-w-md">

@@ -177,7 +177,7 @@ export default function ParticipantPortal() {
   // ================= 1. REGISTRATION / JOIN PORTAL VIEW =================
   if (!currentTeam) {
     return (
-      <div className="relative min-h-[85vh] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+      <div className="relative flex items-center justify-center px-4 py-4 sm:py-8">
         
         {/* Unified Atmospheric Background Canvas */}
         <BackgroundCanvas variant="participant" />

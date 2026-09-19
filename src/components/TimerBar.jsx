@@ -7,20 +7,25 @@ export default function TimerBar({ timeRemaining, duration = 30, status = "live"
   const { playTick } = useSound();
   const lastSecondRef = useRef(null);
 
-  const percentage = Math.max(0, Math.min(100, (timeRemaining / duration) * 100));
-  const isUrgent = timeRemaining <= 5 && timeRemaining > 0;
-  const isWarning = timeRemaining <= 10 && timeRemaining > 5;
-  const isExpired = timeRemaining <= 0 || status === "locked" || status === "revealed";
+  const safeDuration = typeof duration === "number" && !isNaN(duration) && duration > 0 ? duration : 30;
+  const safeTime = typeof timeRemaining === "number" && !isNaN(timeRemaining) 
+    ? Math.max(0, timeRemaining) 
+    : (status === "locked" || status === "revealed" ? 0 : safeDuration);
+
+  const percentage = Math.max(0, Math.min(100, (safeTime / safeDuration) * 100));
+  const isUrgent = safeTime <= 5 && safeTime > 0;
+  const isWarning = safeTime <= 10 && safeTime > 5;
+  const isExpired = safeTime <= 0 || status === "locked" || status === "revealed";
 
   // Sound ticking for last 5 seconds
   useEffect(() => {
     if (status !== "live") return;
-    const currentInt = Math.ceil(timeRemaining);
+    const currentInt = Math.ceil(safeTime);
     if (currentInt <= 5 && currentInt > 0 && currentInt !== lastSecondRef.current) {
       lastSecondRef.current = currentInt;
       playTick(true);
     }
-  }, [timeRemaining, status, playTick]);
+  }, [safeTime, status, playTick]);
 
   const getColorClass = () => {
     if (isExpired) return "bg-slate-300";
@@ -41,7 +46,7 @@ export default function TimerBar({ timeRemaining, duration = 30, status = "live"
       <div className="flex items-center gap-2">
         <div className={`px-2.5 py-1 rounded-full border text-xs font-mono font-bold flex items-center gap-1.5 ${getBadgeStyle()}`}>
           <Clock className="w-3.5 h-3.5" />
-          <span>{timeRemaining.toFixed(0)}s</span>
+          <span>{safeTime.toFixed(0)}s</span>
         </div>
         <div className="flex-1 h-2.5 bg-purple-100 rounded-full overflow-hidden border border-purple-200">
           <div
@@ -59,7 +64,7 @@ export default function TimerBar({ timeRemaining, duration = 30, status = "live"
         <div className="flex items-center gap-2">
           <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-black border shadow-sm ${getBadgeStyle()}`}>
             {isUrgent ? <AlertTriangle className="w-4 h-4 animate-bounce" /> : <Clock className="w-4 h-4" />}
-            <span>{isExpired ? "TIME'S UP" : `${timeRemaining.toFixed(1)}s`}</span>
+            <span>{isExpired ? "TIME'S UP" : `${safeTime.toFixed(1)}s`}</span>
           </span>
           <span className="text-xs font-bold text-slate-500">
             {status === "live" ? "Server Timer Synced" : status.toUpperCase()}

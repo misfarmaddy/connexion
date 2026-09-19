@@ -25,30 +25,22 @@ import { mockSync } from "../firebase/mockSyncService";
 const GameContext = createContext();
 
 export function GameProvider({ children }) {
-  const [roundState, setRoundState] = useState({
-    currentRound: 1,
-    activeGroup: "A",
-    currentQuestionId: "r1_q01",
-    status: "waiting", // "waiting", "live", "locked", "revealed", "completed"
-    questionStartTimestamp: null,
-    duration: 30,
-    suddenDeathActive: false,
-    suddenDeathTeamIds: [],
-    roundCompleted: false
-  });
+  const [roundState, setRoundState] = useState(() => mockSync.getRoundState());
 
-  const [buzzerState, setBuzzerState] = useState({
-    armed: false,
-    activeGroup: "A",
-    currentQuestionId: null,
-    armedTimestamp: null,
-    firstBuzz: null,
-    buzzQueue: []
-  });
+  const [buzzerState, setBuzzerState] = useState(() => (
+    mockSync.getBuzzerState ? mockSync.getBuzzerState() : {
+      armed: false,
+      activeGroup: "A",
+      currentQuestionId: null,
+      armedTimestamp: null,
+      firstBuzz: null,
+      buzzQueue: []
+    }
+  ));
 
-  const [questions, setQuestions] = useState([]);
-  const [teams, setTeams] = useState([]);
-  const [scoreLog, setScoreLog] = useState([]);
+  const [questions, setQuestions] = useState(() => mockSync.getQuestions());
+  const [teams, setTeams] = useState(() => mockSync.getTeams());
+  const [scoreLog, setScoreLog] = useState(() => (mockSync.getScoreLog ? mockSync.getScoreLog() : []));
   const [timeRemaining, setTimeRemaining] = useState(30);
 
   // Subscriptions to live data sources
@@ -70,20 +62,37 @@ export function GameProvider({ children }) {
 
   // Server-authoritative timer countdown calculation
   useEffect(() => {
-    if (roundState.status !== "live" || !roundState.questionStartTimestamp) {
+    const duration = typeof roundState.duration === "number" && !isNaN(roundState.duration) && roundState.duration > 0
+      ? roundState.duration
+      : 30;
+
+    const startTs = typeof roundState.questionStartTimestamp === "number" && !isNaN(roundState.questionStartTimestamp) && roundState.questionStartTimestamp > 0
+      ? roundState.questionStartTimestamp
+      : null;
+
+    if (roundState.status !== "live" || !startTs) {
       if (roundState.status === "locked" || roundState.status === "revealed") {
         setTimeRemaining(0);
       } else {
-        setTimeRemaining(roundState.duration || 30);
+        setTimeRemaining(duration);
       }
       return;
     }
 
-    const interval = setInterval(() => {
-      const elapsed = (Date.now() - roundState.questionStartTimestamp) / 1000;
-      const remaining = Math.max(0, (roundState.duration || 30) - elapsed);
-      setTimeRemaining(Number(remaining.toFixed(1)));
+    const calcRemaining = () => {
+      const now = Date.now();
+      const elapsed = Math.max(0, (now - startTs) / 1000);
+      const remaining = Math.max(0, Math.min(duration, duration - elapsed));
+      const safe = !isNaN(remaining) ? Number(remaining.toFixed(1)) : 0;
+      setTimeRemaining(safe);
+      return safe;
+    };
 
+    const initialRem = calcRemaining();
+    if (initialRem <= 0) return;
+
+    const interval = setInterval(() => {
+      const remaining = calcRemaining();
       if (remaining <= 0) {
         clearInterval(interval);
       }

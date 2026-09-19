@@ -279,7 +279,11 @@ export default function AdminPortal() {
       }
 
       const coreQuestions = round1Questions.filter(q => !q.isBackup && !q.isSuddenDeath);
-      const curIdx = coreQuestions.findIndex(q => q.id === roundState.currentQuestionId);
+      let curIdx = coreQuestions.findIndex(q => q.id === roundState.currentQuestionId);
+      if (curIdx === -1 && roundState.currentQuestionId) {
+        const prefix = roundState.currentQuestionId.split('_').slice(0, 2).join('_');
+        curIdx = coreQuestions.findIndex(q => q.id === prefix);
+      }
 
       let nextQ = null;
       if (curIdx === -1) {
@@ -312,7 +316,11 @@ export default function AdminPortal() {
       }
     } else if (roundState.currentRound === 2) {
       const grpPool = round2Questions.filter(q => q.group === roundState.activeGroup);
-      const curIdx = grpPool.findIndex(q => q.id === roundState.currentQuestionId);
+      let curIdx = grpPool.findIndex(q => q.id === roundState.currentQuestionId);
+      if (curIdx === -1 && roundState.currentQuestionId) {
+        const prefix = roundState.currentQuestionId.split('_').slice(0, 3).join('_');
+        curIdx = grpPool.findIndex(q => q.id === prefix);
+      }
       let nextQ = null;
       if (curIdx === -1) {
         nextQ = grpPool[0] || round2Questions[0];
@@ -730,7 +738,7 @@ export default function AdminPortal() {
                       </div>
                     </div>
                     <span className="text-3xl font-black font-mono text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950 px-4 py-1.5 rounded-2xl border border-purple-200">
-                      {timeRemaining.toFixed(1)}s
+                      {(Number(timeRemaining) || 0).toFixed(1)}s
                     </span>
                   </div>
 

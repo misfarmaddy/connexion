@@ -5,7 +5,7 @@ import { INITIAL_QUESTIONS } from "./seedData";
 import { computeRound1Score, computeRankings, checkForTieAtRank15, partitionIntoGroups } from "../utils/scoring";
 
 const CHANNEL_NAME = "connexion_live_channel";
-const CLOUD_TOPIC = "cnx_casyum26_symposium_srm_bca";
+const CLOUD_TOPIC = "cnx_casyum26_srm_bca_live_v4";
 const CLOUD_HTTP_URL = `https://ntfy.sh/${CLOUD_TOPIC}`;
 const CLOUD_WS_URL = `wss://ntfy.sh/${CLOUD_TOPIC}/ws`;
 
@@ -41,7 +41,8 @@ const DEFAULT_ROUND_STATE = {
   duration: 30, // seconds
   suddenDeathActive: false,
   suddenDeathTeamIds: [],
-  roundCompleted: false
+  roundCompleted: false,
+  updatedAt: 0
 };
 
 const DEFAULT_BUZZER_STATE = {
@@ -152,12 +153,14 @@ function broadcast(type, payload) {
 let cloudWs = null;
 let reconnectTimeout = null;
 let isCloudInitialized = false;
+let lastPollTimestamp = null;
+let isPolling = false;
 
 function initCloudSync() {
   if (typeof window === "undefined" || isCloudInitialized) return;
   isCloudInitialized = true;
 
-  // 1. Initial Cloud History Pull to catch up on any existing teams & states
+  // 1. Initial Cloud History Pull (last 60s only) to catch up on any existing active states
   mockSync.pullFromCloud();
 
   // 2. Setup WebSocket for real-time live events across devices
@@ -202,16 +205,25 @@ function initCloudSync() {
 
   connectWs();
 
-  // 3. Auto-sync on window focus & mobile screen resume
-  window.addEventListener("focus", () => mockSync.pullFromCloud());
+  // 3. Auto-sync on window focus & mobile screen resume (throttled to avoid choking)
+  let lastFocusSync = 0;
+  const throttledPull = () => {
+    const now = Date.now();
+    if (now - lastFocusSync > 3000) {
+      lastFocusSync = now;
+      mockSync.pullFromCloud();
+    }
+  };
+
+  window.addEventListener("focus", throttledPull);
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) mockSync.pullFromCloud();
+    if (!document.hidden) throttledPull();
   });
 
-  // 4. Background heartbeat poll (every 12s) to safeguard against mobile sleep
+  // 4. Background heartbeat poll (every 15s) to safeguard against mobile sleep
   setInterval(() => {
     mockSync.pullFromCloud();
-  }, 12000);
+  }, 15000);
 }
 
 // Ensure Initial Seed & Auto-Upgrade to Tamil Connection Bank
@@ -222,11 +234,26 @@ export function initializeStorage() {
     save(STORAGE_KEYS.QUESTIONS, INITIAL_QUESTIONS);
     const curRound = load(STORAGE_KEYS.ROUND_STATE, DEFAULT_ROUND_STATE);
     if (!curRound.currentQuestionId || curRound.currentQuestionId.includes("_leo") || curRound.currentQuestionId === "r1_q01_leo") {
-      save(STORAGE_KEYS.ROUND_STATE, { ...curRound, currentQuestionId: "r1_q01" });
+      save(STORAGE_KEYS.ROUND_STATE, { ...curRound, currentQuestionId: "r1_q01", updatedAt: Date.now() });
     }
   }
   if (!localStorage.getItem(STORAGE_KEYS.ROUND_STATE)) {
-    save(STORAGE_KEYS.ROUND_STATE, DEFAULT_ROUND_STATE);
+    save(STORAGE_KEYS.ROUND_STATE, { ...DEFAULT_ROUND_STATE, updatedAt: Date.now() });
+  } else {
+    // Sanitize any existing dirty question IDs in round state
+    const curRound = load(STORAGE_KEYS.ROUND_STATE, DEFAULT_ROUND_STATE);
+    if (curRound && curRound.currentQuestionId) {
+      let cleanId = curRound.currentQuestionId;
+      if (typeof cleanId === "string" && (cleanId.startsWith("r1_") || cleanId.startsWith("r3_"))) {
+        const parts = cleanId.split("_");
+        if (parts.length > 2) {
+          cleanId = `${parts[0]}_${parts[1]}`;
+        }
+      }
+      if (cleanId !== curRound.currentQuestionId || !curRound.updatedAt) {
+        save(STORAGE_KEYS.ROUND_STATE, { ...curRound, currentQuestionId: cleanId, updatedAt: curRound.updatedAt || Date.now() });
+      }
+    }
   }
   if (!localStorage.getItem(STORAGE_KEYS.BUZZER)) {
     save(STORAGE_KEYS.BUZZER, DEFAULT_BUZZER_STATE);
@@ -250,17 +277,30 @@ export function initializeStorage() {
 export const mockSync = {
   initializeStorage,
 
-  // Pull past events from cloud relay (12h retention)
+  // Incremental lightweight cloud poll (never loads 12 hours of old history)
   async pullFromCloud() {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || isPolling) return;
+    isPolling = true;
     try {
-      const res = await fetch(`${CLOUD_HTTP_URL}/json?poll=1&since=12h`, {
+      const now = Date.now();
+      // Incremental polling: query only recent window (60s on startup, or delta since last poll)
+      let querySince = "60s";
+      if (lastPollTimestamp) {
+        const secondsAgo = Math.max(5, Math.min(300, Math.floor((now - lastPollTimestamp) / 1000) + 2));
+        querySince = `${secondsAgo}s`;
+      }
+
+      const res = await fetch(`${CLOUD_HTTP_URL}/json?poll=1&since=${querySince}`, {
         headers: { "Accept": "application/x-ndjson, text/plain" }
       });
+      lastPollTimestamp = now;
+
       if (!res.ok) return;
       const text = await res.text();
       if (!text) return;
       const lines = text.trim().split("\n");
+
+      const validEvents = [];
       for (const line of lines) {
         if (!line.trim()) continue;
         try {
@@ -268,23 +308,35 @@ export const mockSync = {
           if (row.event === "message" && row.message) {
             const data = typeof row.message === "string" ? JSON.parse(row.message) : row.message;
             if (data && data.senderId !== CLIENT_INSTANCE_ID && data.type) {
-              this.applyRemoteEvent(data, false);
+              validEvents.push(data);
             }
           }
         } catch (e) {}
       }
-      // Filter out any tombstoned / deleted teams after bulk catch-up
-      const deletedIds = load(STORAGE_KEYS.DELETED_TEAM_IDS, []);
-      if (deletedIds.length > 0) {
-        const remainingTeams = load(STORAGE_KEYS.TEAMS, []).filter(t => !deletedIds.includes(t.id));
-        save(STORAGE_KEYS.TEAMS, remainingTeams);
-      }
 
-      // Notify once after bulk catch-up
-      notifyLocal("TEAMS_UPDATED", this.getTeams());
-      notifyLocal("ROUND_STATE_UPDATED", this.getRoundState());
+      if (validEvents.length > 0) {
+        // Sort chronologically before applying
+        validEvents.sort((a, b) => (Number(a.timestamp) || 0) - (Number(b.timestamp) || 0));
+
+        for (const ev of validEvents) {
+          this.applyRemoteEvent(ev, false);
+        }
+
+        // Filter out any tombstoned / deleted teams after bulk catch-up
+        const deletedIds = load(STORAGE_KEYS.DELETED_TEAM_IDS, []);
+        if (deletedIds.length > 0) {
+          const remainingTeams = load(STORAGE_KEYS.TEAMS, []).filter(t => !deletedIds.includes(t.id));
+          save(STORAGE_KEYS.TEAMS, remainingTeams);
+        }
+
+        // Notify once after bulk catch-up
+        notifyLocal("TEAMS_UPDATED", this.getTeams());
+        notifyLocal("ROUND_STATE_UPDATED", this.getRoundState());
+      }
     } catch (e) {
       console.warn("Cloud poll warning:", e);
+    } finally {
+      isPolling = false;
     }
   },
 
@@ -365,7 +417,28 @@ export const mockSync = {
       const incomingRound = payload?.roundState || payload;
       if (incomingRound) {
         const current = load(STORAGE_KEYS.ROUND_STATE, DEFAULT_ROUND_STATE);
-        const updated = { ...current, ...incomingRound };
+        const incomingTime = Number(incomingRound.updatedAt || eventData.timestamp || 0);
+        const currentTime = Number(current.updatedAt || 0);
+
+        // Strict monotonic check: Discard stale or out-of-order events
+        if (incomingTime && currentTime && incomingTime < currentTime) {
+          return;
+        }
+
+        let cleanQId = incomingRound.currentQuestionId;
+        if (cleanQId && typeof cleanQId === "string" && (cleanQId.startsWith("r1_") || cleanQId.startsWith("r3_"))) {
+          const parts = cleanQId.split("_");
+          if (parts.length > 2) {
+            cleanQId = `${parts[0]}_${parts[1]}`;
+          }
+        }
+
+        const updated = {
+          ...current,
+          ...incomingRound,
+          currentQuestionId: cleanQId || incomingRound.currentQuestionId,
+          updatedAt: Math.max(incomingTime, currentTime, Date.now())
+        };
         save(STORAGE_KEYS.ROUND_STATE, updated);
         if (shouldNotify) notifyLocal("ROUND_STATE_UPDATED", updated);
       }
@@ -397,7 +470,14 @@ export const mockSync = {
         }
       }
     } else if (type === "GAME_RESET") {
-      save(STORAGE_KEYS.ROUND_STATE, DEFAULT_ROUND_STATE);
+      const incomingTime = Number(eventData.timestamp || payload?.timestamp || 0);
+      const current = load(STORAGE_KEYS.ROUND_STATE, DEFAULT_ROUND_STATE);
+      const currentTime = Number(current.updatedAt || 0);
+      if (incomingTime && currentTime && incomingTime < currentTime) {
+        return;
+      }
+      const resetRound = { ...DEFAULT_ROUND_STATE, updatedAt: incomingTime || Date.now() };
+      save(STORAGE_KEYS.ROUND_STATE, resetRound);
       save(STORAGE_KEYS.BUZZER, DEFAULT_BUZZER_STATE);
       save(STORAGE_KEYS.SCORE_LOG, []);
       save(STORAGE_KEYS.SUBMISSIONS, {});
@@ -407,7 +487,7 @@ export const mockSync = {
       save(STORAGE_KEYS.TEAMS, teams);
       if (shouldNotify) {
         notifyLocal("GAME_RESET", {});
-        notifyLocal("ROUND_STATE_UPDATED", DEFAULT_ROUND_STATE);
+        notifyLocal("ROUND_STATE_UPDATED", resetRound);
         notifyLocal("BUZZER_RESET", DEFAULT_BUZZER_STATE);
         notifyLocal("TEAMS_UPDATED", teams);
       }
@@ -447,7 +527,8 @@ export const mockSync = {
 
   updateRoundState(updates) {
     const current = this.getRoundState();
-    const updated = { ...current, ...updates };
+    const now = Date.now();
+    const updated = { ...current, ...updates, updatedAt: now };
     save(STORAGE_KEYS.ROUND_STATE, updated);
     broadcast("ROUND_STATE_UPDATED", { roundState: updated });
     return updated;
@@ -918,7 +999,9 @@ export const mockSync = {
    * Reset entire game state for fresh demo / tournament run
    */
   resetGame() {
-    save(STORAGE_KEYS.ROUND_STATE, DEFAULT_ROUND_STATE);
+    const now = Date.now();
+    const resetRound = { ...DEFAULT_ROUND_STATE, updatedAt: now };
+    save(STORAGE_KEYS.ROUND_STATE, resetRound);
     save(STORAGE_KEYS.BUZZER, DEFAULT_BUZZER_STATE);
     save(STORAGE_KEYS.SCORE_LOG, []);
     save(STORAGE_KEYS.SUBMISSIONS, {});
@@ -936,8 +1019,8 @@ export const mockSync = {
     }));
     save(STORAGE_KEYS.TEAMS, teams);
 
-    broadcast("GAME_RESET", {});
-    broadcast("ROUND_STATE_UPDATED", DEFAULT_ROUND_STATE);
+    broadcast("GAME_RESET", { timestamp: now });
+    broadcast("ROUND_STATE_UPDATED", { roundState: resetRound });
     broadcast("BUZZER_RESET", DEFAULT_BUZZER_STATE);
     broadcast("TEAMS_UPDATED", teams);
   }

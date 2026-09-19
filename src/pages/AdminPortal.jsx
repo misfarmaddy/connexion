@@ -42,6 +42,7 @@ export default function AdminPortal() {
     resetBuzzer,
     triggerAutoScore,
     lockAndComputeTop15,
+    qualifyTop3Finalists,
     resetGame,
     deleteTeam,
     clearAllTeams,
@@ -303,13 +304,15 @@ export default function AdminPortal() {
         // Advance to next core question
         nextQ = coreQuestions[curIdx + 1];
       } else {
-        // Reached end of core questions: check backup pool first, else cycle back to Q1
-        const fullList = round1Questions.filter(q => !q.isSuddenDeath);
-        const fullIdx = fullList.findIndex(q => q.id === roundState.currentQuestionId);
-        if (fullIdx >= 0 && fullIdx < fullList.length - 1) {
-          nextQ = fullList[fullIdx + 1];
+        // Reached end of 10 Core Questions!
+        const shouldConclude = window.confirm(
+          "🏁 All 10 questions of Round 1 have been completed!\n\nWould you like to conclude Round 1 and calculate the Top 15 Qualifiers for Round 2 now?"
+        );
+        if (shouldConclude) {
+          handleLockTop15();
+          return;
         } else {
-          // Wrap around safely so admin never gets blocked
+          // If admin clicked cancel, loop back to Question 1 safely
           nextQ = coreQuestions[0] || round1Questions[0];
         }
       }
@@ -405,10 +408,34 @@ export default function AdminPortal() {
     if (res.hasTie) {
       alert(`⚠️ TIE DETECTED AT RANK 15! ${res.tiedTeams.length} teams tied. Sudden Death initiated!`);
     } else {
-      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
       playFanfare();
-      alert("🎉 Top 15 locked and seeded into 3 Round 2 groups successfully!");
+      alert("🎉 Top 15 locked and seeded into Groups A, B, and C successfully!\n\nRound 1 is now officially complete. You can now toggle participant leaderboard access or proceed to Round 2.");
     }
+  };
+
+  const handleQualifyFinalists = () => {
+    const res = qualifyTop3Finalists();
+    playFanfare();
+    confetti({ particleCount: 180, spread: 90, origin: { y: 0.6 } });
+    setLiveRoundView(3);
+    const finalistNames = (res.finalists || [])
+      .map(f => `${f.teamName} (${f.round2Group ? `Group ${f.round2Group}` : "Winner"}: ${f.score || 0} pts)`)
+      .join("\n• ");
+    alert(`🎉 TOP 3 FINALISTS QUALIFIED FOR GRAND FINALE!\n\n• ${finalistNames}\n\nRound 3 Championship is now loaded!`);
+  };
+
+  const handleToggleParticipantLeaderboard = () => {
+    const nextState = !Boolean(roundState.allowParticipantLeaderboard);
+    updateRoundState({
+      allowParticipantLeaderboard: nextState,
+      currentQuestionId: roundState.currentQuestionId
+    });
+    playTick();
+    alert(nextState 
+      ? "🔓 Participant Leaderboard is now PUBLIC! Participants can now view tournament standings on their devices."
+      : "🔒 Participant Leaderboard is now LOCKED (Admins Only). Standings are hidden from participants."
+    );
   };
 
   const handleArmBuzzer = (group, qId) => {
@@ -419,19 +446,20 @@ export default function AdminPortal() {
   const handleBuzzerVerdict = (isCorrect) => {
     if (!buzzerState.firstBuzz) return;
     const { teamId, teamName } = buzzerState.firstBuzz;
-    const pts = isCorrect ? (roundState.currentRound === 3 ? 30 : 20) : -10;
+    const isRound3 = roundState.currentRound === 3;
+    const pts = isCorrect ? (isRound3 ? 30 : 20) : (isRound3 ? -10 : -5);
 
     const team = teams.find(t => t.id === teamId);
     if (team) {
-      const newScore = Math.max(0, (team.score || 0) + pts);
+      const newScore = Math.max(0, (Number(team.score) || 0) + pts);
       mockSync.updateTeam(teamId, { score: newScore });
       mockSync.logScore({
         teamId,
         teamName,
-        round: roundState.currentRound,
-        delta: pts,
-        reason: isCorrect ? "Buzzer Answer Correct" : "Buzzer Answer Wrong (Penalty)",
-        timestamp: Date.now()
+        questionId: roundState.currentQuestionId || "buzzer_q",
+        pointsAwarded: pts,
+        verdict: isCorrect ? "correct" : "wrong",
+        details: isCorrect ? `Buzzer answer correct (+${pts} pts)` : `Buzzer answer incorrect (${pts} pts)`
       });
     }
 
@@ -545,9 +573,10 @@ export default function AdminPortal() {
   const currentR1Core = round1Questions.filter(q => !q.isBackup && !q.isSuddenDeath);
   const currentR1Idx = currentR1Core.findIndex(q => q.id === roundState.currentQuestionId);
   const currentR1QNum = currentR1Idx >= 0 ? currentR1Idx + 1 : 1;
+  const isR1LastQ = roundState.currentRound === 1 && currentR1Idx >= currentR1Core.length - 1 && currentR1Core.length > 0;
   const nextR1QNum = currentR1Idx >= 0 && currentR1Idx < currentR1Core.length - 1 
     ? currentR1Idx + 2 
-    : (currentR1Idx >= currentR1Core.length - 1 ? 1 : 2);
+    : 10;
 
   return (
     <div className="relative min-h-screen">
@@ -595,6 +624,28 @@ export default function AdminPortal() {
               <span>Big Screen</span>
               <ExternalLink className="w-3 h-3 opacity-80" />
             </a>
+
+            <button
+              onClick={handleToggleParticipantLeaderboard}
+              className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all cursor-pointer ${
+                roundState.allowParticipantLeaderboard
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20"
+                  : "bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40"
+              }`}
+              title="Toggle whether participants can view tournament standings on their phones"
+            >
+              {roundState.allowParticipantLeaderboard ? (
+                <>
+                  <Eye className="w-3.5 h-3.5 text-emerald-200" />
+                  <span>Leaderboard: Public</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Leaderboard: Hidden</span>
+                </>
+              )}
+            </button>
 
             <button
               onClick={() => setShowAdminSettings(true)}
@@ -816,19 +867,30 @@ export default function AdminPortal() {
                             <span>Reveal Answer</span>
                           </button>
                         )}
+                        {isR1LastQ ? (
+                          <button
+                            onClick={handleLockTop15}
+                            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-pink-600 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-orange-500/25 ring-2 ring-amber-400 cursor-pointer animate-pulse"
+                            title="Conclude Round 1 and calculate Top 15 qualifiers for Round 2"
+                          >
+                            <Award className="w-4 h-4 fill-current" />
+                            <span>Finish Round 1 &amp; Lock Top 15 (Q10/10)</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={handleNextAndStartTimer}
+                            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-500/25 ring-2 ring-emerald-400 cursor-pointer animate-pulse"
+                            title="Advances to next question AND starts the 30s countdown immediately!"
+                          >
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                            <span>Next &amp; Start 30s (Q{nextR1QNum}/10)</span>
+                          </button>
+                        )}
                         <button
-                          onClick={handleNextAndStartTimer}
-                          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-500/25 ring-2 ring-emerald-400 cursor-pointer animate-pulse"
-                          title="Advances to next question AND starts the 30s countdown immediately!"
-                        >
-                          <Play className="w-3.5 h-3.5 fill-current" />
-                          <span>Next &amp; Start 30s (Q{nextR1QNum}/10)</span>
-                        </button>
-                        <button
-                          onClick={() => handleNextQuestion(false)}
+                          onClick={() => isR1LastQ ? handleLockTop15() : handleNextQuestion(false)}
                           className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer"
                         >
-                          <span>Next (Prepare)</span>
+                          <span>{isR1LastQ ? "Lock Top 15" : "Next (Prepare)"}</span>
                           <ArrowRight className="w-4 h-4" />
                         </button>
                         <button
@@ -844,9 +906,15 @@ export default function AdminPortal() {
                   )}
 
                   <div className="flex flex-wrap gap-2.5 pt-2">
-                    <button onClick={handleNextAndStartTimer} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-600/30 cursor-pointer">
-                      <Play className="w-4 h-4 fill-current" /> Next &amp; Start 30s (Q{nextR1QNum}/10)
-                    </button>
+                    {isR1LastQ ? (
+                      <button onClick={handleLockTop15} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-pink-600 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-orange-500/30 cursor-pointer animate-pulse">
+                        <Award className="w-4 h-4 fill-current" /> Finish Round 1 &amp; Lock Top 15 (Q10/10)
+                      </button>
+                    ) : (
+                      <button onClick={handleNextAndStartTimer} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-600/30 cursor-pointer">
+                        <Play className="w-4 h-4 fill-current" /> Next &amp; Start 30s (Q{nextR1QNum}/10)
+                      </button>
+                    )}
                     <button onClick={handleStartTimer} className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
                       <Play className="w-4 h-4 fill-current" /> Start 30s Timer
                     </button>
@@ -859,8 +927,8 @@ export default function AdminPortal() {
                     <button onClick={handleAutoScore} className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer">
                       <Zap className="w-4 h-4 fill-current text-yellow-200" /> Auto-Score Submissions ({currentSubmissions.length})
                     </button>
-                    <button onClick={() => handleNextQuestion(false)} className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md shadow-purple-600/20 cursor-pointer">
-                      <span>Next (Prepare)</span>
+                    <button onClick={() => isR1LastQ ? handleLockTop15() : handleNextQuestion(false)} className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md shadow-purple-600/20 cursor-pointer">
+                      <span>{isR1LastQ ? "Lock Top 15" : "Next (Prepare)"}</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                     <button
@@ -874,14 +942,68 @@ export default function AdminPortal() {
                   </div>
                 </div>
 
+                {roundState.roundCompleted && roundState.currentRound === 1 && (
+                  <div className="p-5 rounded-3xl bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-cyan-500/15 border-2 border-emerald-400 dark:border-emerald-600 shadow-md space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md">
+                          <Award className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h4 className="text-base font-black text-slate-900 dark:text-white">
+                            🎉 Round 1 Complete! Top 15 Qualified &amp; Seeded
+                          </h4>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                            Top 15 teams have been partitioned into Groups A, B, and C (5 teams each) for Round 2.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={handleToggleParticipantLeaderboard}
+                          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm cursor-pointer transition-all ${
+                            roundState.allowParticipantLeaderboard
+                              ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                              : "bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40"
+                          }`}
+                        >
+                          {roundState.allowParticipantLeaderboard ? "🔓 Leaderboard: Visible to Teams" : "🔒 Leaderboard: Hidden from Teams"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setLiveRoundView(2);
+                            updateRoundState({
+                              currentRound: 2,
+                              activeGroup: "A",
+                              currentQuestionId: round2Questions.find(q => q.group === "A")?.id || "r2_gA_q01",
+                              status: "waiting",
+                              duration: 20,
+                              questionStartTimestamp: null
+                            });
+                          }}
+                          className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer"
+                        >
+                          <span>Proceed to Round 2 (Buzzer Groups)</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between p-4 bg-white/95 dark:bg-slate-900/95 rounded-2xl border-2 border-purple-200 dark:border-purple-800 shadow-sm">
                   <div>
                     <h4 className="text-sm font-black text-slate-900 dark:text-white">Round 1 Top 15 Final Cutoff</h4>
                     <p className="text-xs text-slate-500">Lock standings and seed qualified teams into Groups A, B, C</p>
                   </div>
-                  <button onClick={handleLockTop15} className="px-5 py-2.5 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md">
-                    🏆 Compute &amp; Seed Top 15
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleToggleParticipantLeaderboard} className="px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl border border-slate-300 dark:border-slate-700 cursor-pointer">
+                      {roundState.allowParticipantLeaderboard ? "🔒 Hide Standings" : "🔓 Show Standings to Teams"}
+                    </button>
+                    <button onClick={handleLockTop15} className="px-5 py-2.5 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md cursor-pointer">
+                      🏆 Compute &amp; Seed Top 15
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1015,6 +1137,95 @@ export default function AdminPortal() {
                     </div>
                   </div>
                 )}
+
+                {/* Round 2 Group Standings (3 Groups of 5 = Top 15) & Grand Finals Advancement */}
+                <div className="pt-4 border-t border-purple-100 dark:border-purple-800/60 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-amber-500" />
+                        <span>Round 2 Group Standings &amp; Top 3 Finalist Selection</span>
+                      </h4>
+                      <p className="text-xs text-slate-500 font-medium">
+                        Highest scoring team from Group A, Group B, and Group C will be advanced to Round 3.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={handleQualifyFinalists}
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-pink-600 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-orange-500/25 ring-2 ring-amber-300 cursor-pointer animate-pulse"
+                    >
+                      <Award className="w-4 h-4 fill-current" />
+                      <span>🏆 Qualify Top 3 Group Winners to Finals</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {["A", "B", "C"].map((grpKey) => {
+                      const grpTeams = teams
+                        .filter(t => t.round2Group === grpKey)
+                        .sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
+
+                      return (
+                        <div 
+                          key={grpKey} 
+                          className={`p-4 rounded-2xl border-2 transition-all ${
+                            roundState.activeGroup === grpKey 
+                              ? "bg-purple-50/70 dark:bg-purple-950/30 border-purple-400 shadow-sm" 
+                              : "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between pb-2 border-b border-purple-100 dark:border-purple-800/60 mb-2">
+                            <span className="font-black text-xs uppercase tracking-wider text-purple-700 dark:text-purple-300">
+                              Group {grpKey} ({grpTeams.length} Teams)
+                            </span>
+                            {grpTeams[0] && (
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                                👑 #1: {grpTeams[0].teamName}
+                              </span>
+                            )}
+                          </div>
+
+                          {grpTeams.length === 0 ? (
+                            <p className="text-xs text-slate-400 py-3 text-center font-medium">No teams seeded yet.</p>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {grpTeams.map((tm, idx) => (
+                                <div
+                                  key={tm.id}
+                                  className={`p-2 rounded-xl flex items-center justify-between text-xs border ${
+                                    idx === 0 
+                                      ? "bg-amber-50/80 dark:bg-amber-950/40 border-amber-300 font-bold shadow-xs" 
+                                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2 truncate">
+                                    <span className="w-5 font-mono font-black text-purple-700 dark:text-purple-300">
+                                      #{idx + 1}
+                                    </span>
+                                    <span className="truncate font-bold text-slate-800 dark:text-slate-200">
+                                      {tm.teamName}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono font-black text-pink-600">
+                                      {tm.score || 0} pts
+                                    </span>
+                                    {tm.qualifiedFinal && (
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                        Finalist
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1134,18 +1345,55 @@ export default function AdminPortal() {
                 )}
 
                 {/* Final 3 Teams Podium */}
-                <h4 className="text-xs font-black uppercase text-slate-500 pt-2">Qualified Finalist Teams</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {teams.filter(t => t.qualifiedFinal).map((team, idx) => (
-                    <div key={team.id} className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-purple-200 dark:border-purple-800 text-center space-y-2">
-                      <span className="w-9 h-9 mx-auto rounded-full bg-amber-100 text-amber-800 font-black flex items-center justify-center text-sm">#{idx + 1}</span>
-                      <h4 className="text-base font-black text-slate-900 dark:text-white">{team.teamName}</h4>
-                      <div className="text-2xl font-black text-purple-700 dark:text-purple-300 font-mono">{team.score} pts</div>
-                      <button onClick={() => handleCrownWinner(team)} className="w-full py-2 bg-gradient-to-r from-amber-500 to-pink-600 text-white font-black text-xs rounded-xl shadow-md">
-                        👑 Crown Champion
-                      </button>
+                <div className="pt-3 border-t border-purple-100 dark:border-purple-800 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-amber-500" />
+                        <span>Grand Finale Championship Standings (ADMIN EYES ONLY)</span>
+                      </h4>
+                      <p className="text-xs text-slate-500 font-medium">
+                        🔒 Winner list is visible to ADMIN ONLY. Final rankings are sealed and hidden on participant screens until announced live on stage.
+                      </p>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {teams
+                      .filter(t => t.qualifiedFinal)
+                      .sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0))
+                      .map((team, idx) => {
+                        const medalColors = [
+                          "border-amber-400 bg-gradient-to-b from-amber-500/15 to-white dark:to-slate-800 ring-2 ring-amber-400 scale-102",
+                          "border-slate-300 bg-gradient-to-b from-slate-200/20 to-white dark:to-slate-800",
+                          "border-amber-700/40 bg-gradient-to-b from-amber-700/10 to-white dark:to-slate-800"
+                        ];
+                        const medalLabels = ["🥇 1st Place (Champion)", "🥈 2nd Place (Runner-Up)", "🥉 3rd Place (2nd Runner-Up)"];
+                        const badgeColors = ["bg-amber-100 text-amber-900 border-amber-300", "bg-slate-100 text-slate-700 border-slate-300", "bg-amber-50 text-amber-900 border-amber-200"];
+
+                        return (
+                          <div 
+                            key={team.id} 
+                            className={`p-5 rounded-3xl border-2 text-center space-y-3 shadow-md transition-all ${
+                              medalColors[idx] || "border-purple-200 bg-white dark:bg-slate-800"
+                            }`}
+                          >
+                            <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider inline-block border ${badgeColors[idx] || ""}`}>
+                              {medalLabels[idx] || `#${idx + 1}`}
+                            </span>
+                            <h4 className="text-lg font-black text-slate-900 dark:text-white truncate">{team.teamName}</h4>
+                            <p className="text-xs text-slate-500 truncate">{team.collegeName}</p>
+                            <div className="text-3xl font-black text-purple-700 dark:text-purple-300 font-mono">{team.score || 0} pts</div>
+                            <button 
+                              onClick={() => handleCrownWinner(team)} 
+                              className="w-full py-2.5 bg-gradient-to-r from-amber-500 via-pink-600 to-purple-600 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md cursor-pointer transition-all active:scale-95"
+                            >
+                              👑 Crown Champion
+                            </button>
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
               </div>
             )}

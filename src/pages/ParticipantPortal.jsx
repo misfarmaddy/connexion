@@ -925,7 +925,7 @@ export default function ParticipantPortal() {
       )}
 
       {/* 5. ROUND 2 & 3 BUZZER VIEW */}
-      {(roundState.currentRound === 2 || roundState.currentRound === 3) && (
+      {(roundState.currentRound === 2 || roundState.currentRound === 3) && !roundState.roundCompleted && (
         <div className="space-y-6">
           <div className="p-4 rounded-3xl bg-white/95 border-2 border-purple-200 shadow-sm flex items-center justify-between">
             <div>
@@ -942,6 +942,7 @@ export default function ParticipantPortal() {
           <BuzzerButton
             buzzerState={buzzerState}
             currentTeam={currentTeam}
+            currentRound={roundState.currentRound}
             onPress={() => pressBuzzer(currentTeam.id, currentTeam.teamName)}
             isEligibleGroup={
               roundState.currentRound === 3 
@@ -954,7 +955,7 @@ export default function ParticipantPortal() {
 
       {/* 6. BETWEEN ROUNDS COMPLETED VIEW */}
       {roundState.roundCompleted && roundState.currentRound === 1 && (
-        <div className="p-8 rounded-3xl bg-white border-2 border-purple-200 text-center space-y-4 shadow-md">
+        <div className="p-8 rounded-3xl bg-white border-2 border-purple-200 text-center space-y-4 shadow-md animate-in fade-in">
           <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-amber-400 to-pink-500 text-white flex items-center justify-center shadow-lg">
             <Award className="w-8 h-8" />
           </div>
@@ -971,6 +972,49 @@ export default function ParticipantPortal() {
               Thank you for playing! Final Round 1 Score: <strong className="text-slate-900">{currentTeam.score || 0} pts</strong>.
             </div>
           )}
+        </div>
+      )}
+
+      {roundState.roundCompleted && roundState.currentRound === 2 && (
+        <div className="p-8 rounded-3xl bg-white border-2 border-purple-200 text-center space-y-4 shadow-md animate-in fade-in">
+          <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center shadow-lg">
+            <Award className="w-8 h-8" />
+          </div>
+          <h3 className="text-2xl font-black text-slate-900">Round 2 Battles Completed!</h3>
+          {currentTeam.qualifiedFinal ? (
+            <div className="p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-400 text-emerald-900 max-w-md mx-auto">
+              <p className="font-black text-base">🏆 CONGRATULATIONS! YOU QUALIFIED FOR THE GRAND FINALE!</p>
+              <p className="text-xs text-emerald-700 mt-1 font-medium">
+                You won your group battle! Prepare for the final 3-team stage buzzer faceoff!
+              </p>
+            </div>
+          ) : (
+            <div className="p-4 rounded-2xl bg-purple-50 border border-purple-200 text-purple-900 max-w-md mx-auto text-xs font-medium">
+              Round 2 has concluded. Thank you for representing your college! Final Score: <strong className="text-slate-900">{currentTeam.score || 0} pts</strong>.
+            </div>
+          )}
+        </div>
+      )}
+
+      {roundState.roundCompleted && roundState.currentRound === 3 && (
+        <div className="p-8 rounded-3xl bg-gradient-to-br from-slate-900 via-purple-950 to-indigo-950 text-white border-2 border-amber-400/40 text-center space-y-5 shadow-2xl animate-in fade-in">
+          <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/20">
+            <Trophy className="w-10 h-10" />
+          </div>
+          <div className="space-y-1">
+            <span className="text-xs font-black uppercase tracking-widest text-amber-300">CASYUM'26 Connexion Quiz</span>
+            <h3 className="text-2xl sm:text-3xl font-black text-white">Grand Finale Concluded!</h3>
+          </div>
+          <div className="p-5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 max-w-md mx-auto text-center space-y-2">
+            <p className="font-black text-amber-300 text-sm flex items-center justify-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>Official Results Sealed</span>
+              <Sparkles className="w-4 h-4 text-amber-400" />
+            </p>
+            <p className="text-xs text-purple-200 font-medium leading-relaxed">
+              The 1st, 2nd, and 3rd place champions are sealed on Admin authority and will be announced live on stage! Please direct your attention to the stage podium!
+            </p>
+          </div>
         </div>
       )}
 
@@ -991,27 +1035,49 @@ export default function ParticipantPortal() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto py-3 space-y-2">
-              {teams.slice(0, 15).map((t, idx) => (
-                <div
-                  key={t.id}
-                  className={`p-3 rounded-2xl border-2 flex items-center justify-between text-xs ${
-                    t.id === currentTeam.id
-                      ? "bg-purple-50 border-purple-400 font-bold"
-                      : "bg-slate-50 border-slate-200"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="w-6 font-mono font-black text-purple-700">#{idx + 1}</span>
-                    <div>
-                      <span className="font-black text-slate-900">{t.teamName}</span>
-                      <span className="text-[10px] text-slate-500 block font-semibold">{t.collegeName}</span>
-                    </div>
-                  </div>
-                  <span className="font-mono font-black text-purple-700 text-sm">{t.score || 0} pts</span>
+            {roundState.currentRound === 3 ? (
+              <div className="py-12 px-6 text-center space-y-3">
+                <div className="w-14 h-14 mx-auto rounded-full bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200">
+                  <Lock className="w-7 h-7" />
                 </div>
-              ))}
-            </div>
+                <h4 className="text-base font-black text-slate-900">Grand Finale Standings Sealed</h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">
+                  Final positions and champions are sealed on participant screens and will be announced live on stage by the Quiz Master!
+                </p>
+              </div>
+            ) : !roundState.allowParticipantLeaderboard ? (
+              <div className="py-12 px-6 text-center space-y-3">
+                <div className="w-14 h-14 mx-auto rounded-full bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-200">
+                  <Lock className="w-7 h-7" />
+                </div>
+                <h4 className="text-base font-black text-slate-900">Leaderboard Access Locked</h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">
+                  The Quiz Master has not released the standings yet. Standings will be unlocked after the round is officially completed.
+                </p>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto py-3 space-y-2">
+                {teams.slice(0, 15).map((t, idx) => (
+                  <div
+                    key={t.id}
+                    className={`p-3 rounded-2xl border-2 flex items-center justify-between text-xs ${
+                      t.id === currentTeam.id
+                        ? "bg-purple-50 border-purple-400 font-bold"
+                        : "bg-slate-50 border-slate-200"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="w-6 font-mono font-black text-purple-700">#{idx + 1}</span>
+                      <div>
+                        <span className="font-black text-slate-900">{t.teamName}</span>
+                        <span className="text-[10px] text-slate-500 block font-semibold">{t.collegeName}</span>
+                      </div>
+                    </div>
+                    <span className="font-mono font-black text-purple-700 text-sm">{t.score || 0} pts</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

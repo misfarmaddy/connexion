@@ -255,6 +255,10 @@ export function lockAndComputeTop15() {
   return mockSync.lockAndComputeTop15();
 }
 
+export function qualifyTop3Finalists() {
+  return mockSync.qualifyTop3Finalists();
+}
+
 export function resetGame() {
   return mockSync.resetGame();
 }

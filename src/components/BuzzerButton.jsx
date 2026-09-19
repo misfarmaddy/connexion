@@ -8,7 +8,8 @@ export default function BuzzerButton({
   currentTeam, 
   onPress, 
   disabled = false,
-  isEligibleGroup = true 
+  isEligibleGroup = true,
+  currentRound = 2
 }) {
   const { playBuzz } = useSound();
 
@@ -30,9 +31,13 @@ export default function BuzzerButton({
         <div className="p-4 rounded-full bg-purple-50 text-purple-600 mb-3 border border-purple-200">
           <Lock className="w-8 h-8" />
         </div>
-        <h3 className="text-lg font-black text-slate-900">Group {buzzerState.activeGroup} On Stage</h3>
+        <h3 className="text-lg font-black text-slate-900">
+          {currentRound === 3 ? "Grand Finale In Progress" : `Group ${buzzerState.activeGroup || "A"} On Stage`}
+        </h3>
         <p className="text-xs text-slate-500 mt-1">
-          Your team is in Group {currentTeam?.round2Group || "another group"}. Watch the auditorium big screen until your group is called!
+          {currentRound === 3
+            ? "The 3 finalist teams are battling live on stage. Watch the auditorium screen!"
+            : `Your team is in Group ${currentTeam?.round2Group || "another group"}. Watch the auditorium big screen until your group is called!`}
         </p>
       </div>
     );
@@ -46,7 +51,7 @@ export default function BuzzerButton({
           <Award className="w-10 h-10" />
         </div>
         <h2 className="text-2xl sm:text-3xl font-black text-emerald-900 uppercase tracking-wide">
-          ? YOU BUZZED FIRST!
+          🔔 YOU BUZZED FIRST!
         </h2>
         <p className="text-sm font-bold text-emerald-800 mt-2">
           Answer out loud to the Quiz Master!
@@ -90,7 +95,7 @@ export default function BuzzerButton({
           }`} 
         />
         <span className={isArmed ? "text-emerald-700 font-black" : "text-slate-500"}>
-          {isArmed ? "? BUZZER ARMED ? READY TO PRESS!" : "BUZZER DISARMED ? WAIT FOR QUIZ MASTER"}
+          {isArmed ? "⚡ BUZZER ARMED — READY TO PRESS!" : "BUZZER DISARMED — WAIT FOR QUIZ MASTER"}
         </span>
       </div>
 

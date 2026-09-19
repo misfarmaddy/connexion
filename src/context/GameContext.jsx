@@ -9,6 +9,7 @@ import {
   submitAnswer as apiSubmitAnswer,
   autoScoreQuestion,
   lockAndComputeTop15 as apiLockTop15,
+  qualifyTop3Finalists as apiQualifyTop3Finalists,
   resetGame as apiResetGame,
   deleteTeam as apiDeleteTeam,
   clearAllTeams as apiClearAllTeams,
@@ -156,6 +157,10 @@ export function GameProvider({ children }) {
     return apiLockTop15();
   };
 
+  const qualifyTop3Finalists = () => {
+    return apiQualifyTop3Finalists();
+  };
+
   const resetGame = () => {
     apiResetGame();
   };
@@ -252,6 +257,7 @@ export function GameProvider({ children }) {
         submitAnswer,
         triggerAutoScore,
         lockAndComputeTop15,
+        qualifyTop3Finalists,
         resetGame,
         deleteTeam,
         clearAllTeams,

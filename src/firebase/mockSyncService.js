@@ -43,6 +43,7 @@ const DEFAULT_ROUND_STATE = {
   suddenDeathActive: false,
   suddenDeathTeamIds: [],
   roundCompleted: false,
+  allowParticipantLeaderboard: false,
   updatedAt: 0,
   version: 0,
   localReceivedAt: Date.now()
@@ -1048,6 +1049,42 @@ export const mockSync = {
     });
 
     return { hasTie: false, top15: ranked.slice(0, 15), groups };
+  },
+
+  /**
+   * Select top 1 team from each Round 2 group (A, B, C) to qualify for Round 3 (Grand Finals)
+   */
+  qualifyTop3Finalists() {
+    const teams = this.getTeams();
+    const groupA = teams.filter(t => t.round2Group === "A").sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
+    const groupB = teams.filter(t => t.round2Group === "B").sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
+    const groupC = teams.filter(t => t.round2Group === "C").sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
+
+    const topA = groupA[0] || null;
+    const topB = groupB[0] || null;
+    const topC = groupC[0] || null;
+
+    const finalists = [topA, topB, topC].filter(Boolean);
+    const finalistIds = finalists.map(f => f.id);
+
+    const updatedTeams = teams.map(t => ({
+      ...t,
+      qualifiedFinal: finalistIds.includes(t.id)
+    }));
+
+    save(STORAGE_KEYS.TEAMS, updatedTeams);
+    broadcast("TEAMS_UPDATED", updatedTeams);
+
+    this.updateRoundState({
+      currentRound: 3,
+      currentQuestionId: "r3_q01",
+      status: "waiting",
+      duration: 20,
+      questionStartTimestamp: null,
+      roundCompleted: false
+    });
+
+    return { finalists, allFinalistIds: finalistIds };
   },
 
   /**

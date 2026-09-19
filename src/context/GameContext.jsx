@@ -60,17 +60,13 @@ export function GameProvider({ children }) {
     };
   }, []);
 
-  // Server-authoritative timer countdown calculation
+  // Server-authoritative timer countdown calculation (skew-proof using local baseline)
   useEffect(() => {
     const duration = typeof roundState.duration === "number" && !isNaN(roundState.duration) && roundState.duration > 0
       ? roundState.duration
       : 30;
 
-    const startTs = typeof roundState.questionStartTimestamp === "number" && !isNaN(roundState.questionStartTimestamp) && roundState.questionStartTimestamp > 0
-      ? roundState.questionStartTimestamp
-      : null;
-
-    if (roundState.status !== "live" || !startTs) {
+    if (roundState.status !== "live") {
       if (roundState.status === "locked" || roundState.status === "revealed") {
         setTimeRemaining(0);
       } else {
@@ -78,6 +74,9 @@ export function GameProvider({ children }) {
       }
       return;
     }
+
+    // Local baseline timestamp prevents clock drift crashes across devices
+    const startTs = roundState.localReceivedAt || roundState.questionStartTimestamp || Date.now();
 
     const calcRemaining = () => {
       const now = Date.now();
@@ -99,7 +98,7 @@ export function GameProvider({ children }) {
     }, 100);
 
     return () => clearInterval(interval);
-  }, [roundState.status, roundState.questionStartTimestamp, roundState.duration]);
+  }, [roundState.status, roundState.questionStartTimestamp, roundState.localReceivedAt, roundState.duration]);
 
   // Determine active question object
   const activeQuestion = useMemo(() => {

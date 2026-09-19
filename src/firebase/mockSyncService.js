@@ -28,7 +28,8 @@ const STORAGE_KEYS = {
   SCORE_LOG: "cnx_score_log",
   QUESTIONS: "cnx_questions",
   SUBMISSIONS: "cnx_submissions",
-  DELETED_TEAM_IDS: "cnx_deleted_team_ids"
+  DELETED_TEAM_IDS: "cnx_deleted_team_ids",
+  ADMINS: "cnx_admins_list"
 };
 
 // Initial Default State
@@ -42,7 +43,9 @@ const DEFAULT_ROUND_STATE = {
   suddenDeathActive: false,
   suddenDeathTeamIds: [],
   roundCompleted: false,
-  updatedAt: 0
+  updatedAt: 0,
+  version: 0,
+  localReceivedAt: Date.now()
 };
 
 const DEFAULT_BUZZER_STATE = {
@@ -332,6 +335,10 @@ export const mockSync = {
         // Notify once after bulk catch-up
         notifyLocal("TEAMS_UPDATED", this.getTeams());
         notifyLocal("ROUND_STATE_UPDATED", this.getRoundState());
+        const curAdmins = this.getAdmins();
+        if (curAdmins && curAdmins.length > 0) {
+          notifyLocal("ADMINS_UPDATED", { admins: curAdmins });
+        }
       }
     } catch (e) {
       console.warn("Cloud poll warning:", e);
@@ -417,15 +424,17 @@ export const mockSync = {
       const incomingRound = payload?.roundState || payload;
       if (incomingRound) {
         const current = load(STORAGE_KEYS.ROUND_STATE, DEFAULT_ROUND_STATE);
-        const incomingTime = Number(incomingRound.updatedAt || eventData.timestamp || 0);
-        const currentTime = Number(current.updatedAt || 0);
+        const incomingVersion = Number(incomingRound.version || 0);
+        const currentVersion = Number(current.version || 0);
 
-        // Strict monotonic check: Discard stale or out-of-order events
-        if (incomingTime && currentTime && incomingTime < currentTime) {
+        // Version-based ordering check: If incoming version is strictly older, ignore stale event
+        if (incomingVersion > 0 && currentVersion > 0 && incomingVersion < currentVersion) {
           return;
         }
 
-        let cleanQId = incomingRound.currentQuestionId;
+        // Never let currentQuestionId be undefined! Fallback to current question or default
+        const rawQId = incomingRound.currentQuestionId || current.currentQuestionId || DEFAULT_ROUND_STATE.currentQuestionId;
+        let cleanQId = rawQId;
         if (cleanQId && typeof cleanQId === "string" && (cleanQId.startsWith("r1_") || cleanQId.startsWith("r3_"))) {
           const parts = cleanQId.split("_");
           if (parts.length > 2) {
@@ -433,11 +442,14 @@ export const mockSync = {
           }
         }
 
+        const now = Date.now();
         const updated = {
           ...current,
           ...incomingRound,
-          currentQuestionId: cleanQId || incomingRound.currentQuestionId,
-          updatedAt: Math.max(incomingTime, currentTime, Date.now())
+          currentQuestionId: cleanQId,
+          version: Math.max(incomingVersion, currentVersion + 1),
+          updatedAt: now,
+          localReceivedAt: now
         };
         save(STORAGE_KEYS.ROUND_STATE, updated);
         if (shouldNotify) notifyLocal("ROUND_STATE_UPDATED", updated);
@@ -470,13 +482,14 @@ export const mockSync = {
         }
       }
     } else if (type === "GAME_RESET") {
-      const incomingTime = Number(eventData.timestamp || payload?.timestamp || 0);
       const current = load(STORAGE_KEYS.ROUND_STATE, DEFAULT_ROUND_STATE);
-      const currentTime = Number(current.updatedAt || 0);
-      if (incomingTime && currentTime && incomingTime < currentTime) {
-        return;
-      }
-      const resetRound = { ...DEFAULT_ROUND_STATE, updatedAt: incomingTime || Date.now() };
+      const now = Date.now();
+      const resetRound = { 
+        ...DEFAULT_ROUND_STATE, 
+        version: (Number(current.version) || 0) + 1,
+        updatedAt: now,
+        localReceivedAt: now
+      };
       save(STORAGE_KEYS.ROUND_STATE, resetRound);
       save(STORAGE_KEYS.BUZZER, DEFAULT_BUZZER_STATE);
       save(STORAGE_KEYS.SCORE_LOG, []);
@@ -490,6 +503,17 @@ export const mockSync = {
         notifyLocal("ROUND_STATE_UPDATED", resetRound);
         notifyLocal("BUZZER_RESET", DEFAULT_BUZZER_STATE);
         notifyLocal("TEAMS_UPDATED", teams);
+      }
+    } else if (type === "ADMINS_UPDATED") {
+      const incomingAdmins = payload?.admins || (Array.isArray(payload) ? payload : null);
+      if (Array.isArray(incomingAdmins) && incomingAdmins.length > 0) {
+        const currentAdmins = load(STORAGE_KEYS.ADMINS, []);
+        const map = new Map();
+        currentAdmins.forEach(a => { if (a && (a.id || a.username)) map.set(a.id || a.username, a); });
+        incomingAdmins.forEach(a => { if (a && (a.id || a.username)) map.set(a.id || a.username, { ...(map.get(a.id || a.username) || {}), ...a }); });
+        const merged = Array.from(map.values());
+        save(STORAGE_KEYS.ADMINS, merged);
+        if (shouldNotify) notifyLocal("ADMINS_UPDATED", { admins: merged });
       }
     }
   },
@@ -528,10 +552,41 @@ export const mockSync = {
   updateRoundState(updates) {
     const current = this.getRoundState();
     const now = Date.now();
-    const updated = { ...current, ...updates, updatedAt: now };
+    const nextVersion = (Number(current.version) || 0) + 1;
+    const targetQId = updates.currentQuestionId || current.currentQuestionId || DEFAULT_ROUND_STATE.currentQuestionId;
+    const updated = {
+      ...current,
+      ...updates,
+      currentQuestionId: targetQId,
+      version: nextVersion,
+      updatedAt: now,
+      localReceivedAt: now
+    };
     save(STORAGE_KEYS.ROUND_STATE, updated);
     broadcast("ROUND_STATE_UPDATED", { roundState: updated });
     return updated;
+  },
+
+  // Direct batch save for teams to avoid flooding cloud socket
+  saveTeamsDirect(teams) {
+    save(STORAGE_KEYS.TEAMS, teams);
+    broadcast("TEAMS_UPDATED", teams);
+  },
+
+  // Direct batch save for score audit log
+  saveScoreLogDirect(log) {
+    save(STORAGE_KEYS.SCORE_LOG, log);
+    notifyLocal("SCORE_LOG_UPDATED", log);
+  },
+
+  // --- ADMIN ACCOUNTS (Multi-Device Sync) ---
+  getAdmins() {
+    return load(STORAGE_KEYS.ADMINS, null);
+  },
+
+  saveAdmins(admins) {
+    save(STORAGE_KEYS.ADMINS, admins);
+    broadcast("ADMINS_UPDATED", { admins });
   },
 
   // --- QUESTIONS ---
@@ -541,12 +596,12 @@ export const mockSync = {
 
   saveQuestions(questions) {
     save(STORAGE_KEYS.QUESTIONS, questions);
-    broadcast("QUESTIONS_UPDATED", questions);
+    notifyLocal("QUESTIONS_UPDATED", questions);
   },
 
   resetQuestionsToDefault() {
     save(STORAGE_KEYS.QUESTIONS, INITIAL_QUESTIONS);
-    broadcast("QUESTIONS_UPDATED", INITIAL_QUESTIONS);
+    notifyLocal("QUESTIONS_UPDATED", INITIAL_QUESTIONS);
     return INITIAL_QUESTIONS;
   },
 

@@ -1,6 +1,7 @@
 // CONNEXION - Authentication & Session Context with Multi-Admin Management
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { registerTeam as apiRegisterTeam, subscribeTeam, joinTeamByCode as apiJoinTeamByCode } from "../firebase/firestoreService";
+import { mockSync } from "../firebase/mockSyncService";
 
 const AuthContext = createContext();
 
@@ -28,7 +29,13 @@ function getInitialAdmins() {
       return [DEFAULT_MASTER_ADMIN];
     }
     const list = JSON.parse(raw);
-    return Array.isArray(list) && list.length > 0 ? list : [DEFAULT_MASTER_ADMIN];
+    if (Array.isArray(list) && list.length > 0) {
+      if (!list.some(a => a.id === DEFAULT_MASTER_ADMIN.id || (a.username || "").toLowerCase() === "admin")) {
+        list.unshift(DEFAULT_MASTER_ADMIN);
+      }
+      return list;
+    }
+    return [DEFAULT_MASTER_ADMIN];
   } catch (e) {
     return [DEFAULT_MASTER_ADMIN];
   }
@@ -76,16 +83,37 @@ export function AuthProvider({ children }) {
     return () => unsub();
   }, [currentTeam?.id]);
 
-  // Save admins to localStorage whenever updated
+  // Sync admin accounts across devices via cloud relay
+  useEffect(() => {
+    const unsub = mockSync.onEvent((event) => {
+      if (event && event.type === "ADMINS_UPDATED") {
+        const freshAdmins = event.payload?.admins || event.payload;
+        if (Array.isArray(freshAdmins) && freshAdmins.length > 0) {
+          setAdmins((prev) => {
+            const map = new Map();
+            prev.forEach(a => { if (a && (a.id || a.username)) map.set(a.id || a.username, a); });
+            freshAdmins.forEach(a => { if (a && (a.id || a.username)) map.set(a.id || a.username, { ...(map.get(a.id || a.username) || {}), ...a }); });
+            const merged = Array.from(map.values());
+            localStorage.setItem(ADMIN_LIST_KEY, JSON.stringify(merged));
+            return merged;
+          });
+        }
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // Save admins to localStorage AND broadcast to Cloud Relay for multi-device sync
   const saveAdmins = (updatedAdmins) => {
     setAdmins(updatedAdmins);
     localStorage.setItem(ADMIN_LIST_KEY, JSON.stringify(updatedAdmins));
+    mockSync.saveAdmins(updatedAdmins);
   };
 
   /**
-   * Admin Login with Username OR Email + Password (Strict Matching)
+   * Admin Login with Username OR Email + Password (Strict Matching + Multi-Device Cloud Fallback)
    */
-  const loginAdmin = (identifier, password) => {
+  const loginAdmin = async (identifier, password) => {
     const cleanId = (identifier || "").trim().toLowerCase();
     const cleanPass = (password || "").trim();
 
@@ -93,15 +121,26 @@ export function AuthProvider({ children }) {
       return { success: false, message: "Please enter both Username/Email and Password." };
     }
 
-    // Always fetch latest persisted admins list
-    const adminList = getInitialAdmins();
-
-    // Match strictly by username or email AND exact password
-    const matched = adminList.find(a => 
+    // 1. Check local device admin list first
+    let adminList = getInitialAdmins();
+    let matched = adminList.find(a => 
       ((a.username || "").trim().toLowerCase() === cleanId || 
        (a.email || "").trim().toLowerCase() === cleanId) && 
       a.password === cleanPass
     );
+
+    // 2. If not found locally, pull latest admin list from Cloud Relay (in case created on another device)
+    if (!matched) {
+      try {
+        await mockSync.pullFromCloud();
+        adminList = getInitialAdmins();
+        matched = adminList.find(a => 
+          ((a.username || "").trim().toLowerCase() === cleanId || 
+           (a.email || "").trim().toLowerCase() === cleanId) && 
+          a.password === cleanPass
+        );
+      } catch (e) {}
+    }
 
     if (matched) {
       setIsAdmin(true);

@@ -100,11 +100,11 @@ export default function AdminPortal() {
   const currentSubmissions = mockSync.getSubmissions(roundState.currentQuestionId);
 
   // Handle Admin Login with Username or Email + Password
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setAuthError("");
 
-    const res = loginAdmin(loginIdentifier, loginPassword);
+    const res = await loginAdmin(loginIdentifier, loginPassword);
     if (!res.success) {
       setAuthError(res.message);
       playWrong();
@@ -250,17 +250,27 @@ export default function AdminPortal() {
   };
 
   const handleStartTimer = () => {
-    updateRoundState({ status: "live", questionStartTimestamp: Date.now() });
+    updateRoundState({ 
+      currentQuestionId: roundState.currentQuestionId,
+      status: "live", 
+      questionStartTimestamp: Date.now() 
+    });
     playTick();
   };
 
   const handleForceEnd = () => {
-    updateRoundState({ status: "locked" });
+    updateRoundState({ 
+      currentQuestionId: roundState.currentQuestionId,
+      status: "locked" 
+    });
     playWrong();
   };
 
   const handleRevealAnswer = () => {
-    updateRoundState({ status: "revealed" });
+    updateRoundState({ 
+      currentQuestionId: roundState.currentQuestionId,
+      status: "revealed" 
+    });
     playTick();
   };
 
@@ -647,7 +657,25 @@ export default function AdminPortal() {
                     key={r}
                     onClick={() => {
                       setLiveRoundView(r);
-                      updateRoundState({ currentRound: r });
+                      let targetQId = roundState.currentQuestionId;
+                      if (r === 1) {
+                        const exists = round1Questions.some(q => q.id === roundState.currentQuestionId);
+                        targetQId = exists ? roundState.currentQuestionId : (round1Questions[0]?.id || "r1_q01");
+                      } else if (r === 2) {
+                        const grpPool = round2Questions.filter(q => q.group === (roundState.activeGroup || "A"));
+                        const exists = grpPool.some(q => q.id === roundState.currentQuestionId);
+                        targetQId = exists ? roundState.currentQuestionId : (grpPool[0]?.id || round2Questions[0]?.id || "r2_gA_q01");
+                      } else if (r === 3) {
+                        const exists = round3Questions.some(q => q.id === roundState.currentQuestionId);
+                        targetQId = exists ? roundState.currentQuestionId : (round3Questions[0]?.id || "r3_q01");
+                      }
+                      updateRoundState({ 
+                        currentRound: r,
+                        currentQuestionId: targetQId,
+                        status: "waiting",
+                        duration: r === 1 ? 30 : 20,
+                        questionStartTimestamp: null
+                      });
                     }}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
                       liveRoundView === r
@@ -870,9 +898,16 @@ export default function AdminPortal() {
                       <button
                         key={grp}
                         onClick={() => {
-                          updateRoundState({ activeGroup: grp });
-                          const firstOfGrp = round2Questions.find(q => q.group === grp);
-                          if (firstOfGrp) handleSelectQuestion(firstOfGrp.id);
+                          const firstOfGrp = round2Questions.find(q => q.group === grp) || round2Questions[0];
+                          if (firstOfGrp) {
+                            handleSelectQuestion(firstOfGrp.id);
+                          } else {
+                            updateRoundState({ 
+                              activeGroup: grp, 
+                              currentQuestionId: roundState.currentQuestionId,
+                              status: "waiting"
+                            });
+                          }
                         }}
                         className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
                           roundState.activeGroup === grp ? "bg-purple-600 text-white shadow-sm" : "bg-slate-100 text-slate-600 hover:bg-slate-200"

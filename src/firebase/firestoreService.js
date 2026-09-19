@@ -153,9 +153,15 @@ export function subscribeSubmissions(questionId, callback) {
  * Evaluates all submissions, awards points + speed bonus, updates scoreLog
  */
 export function autoScoreQuestion(question, submissions = []) {
+  if (!question || !Array.isArray(submissions) || submissions.length === 0) {
+    return { correctCount: 0, wrongCount: 0, total: 0 };
+  }
+
   const teams = mockSync.getTeams();
+  const log = mockSync.getScoreLog();
   let correctCount = 0;
   let wrongCount = 0;
+  let teamsChanged = false;
 
   submissions.forEach((sub) => {
     const team = teams.find(t => t.id === sub.teamId);
@@ -171,34 +177,45 @@ export function autoScoreQuestion(question, submissions = []) {
         question.speedBonus || 5
       );
 
-      mockSync.logScore({
+      const entry = {
+        id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         teamId: team.id,
         teamName: team.teamName,
         questionId: question.id,
         pointsAwarded: totalPoints,
         verdict: "correct",
-        details: `Correct answer "${sub.answer}". Base: ${question.points || 10} + Speed Bonus: ${bonus} (${answeredTime}s)`
-      });
+        details: `Correct answer "${sub.answer}". Base: ${question.points || 10} + Speed Bonus: ${bonus} (${answeredTime}s)`,
+        timestamp: Date.now()
+      };
+      log.unshift(entry);
 
-      // Update team stats
+      // Update team stats & score directly in memory
+      team.score = (Number(team.score) || 0) + totalPoints;
       team.totalResponseTime = (Number(team.totalResponseTime) || 0) + answeredTime;
       team.answerCount = (Number(team.answerCount) || 0) + 1;
-      mockSync.updateTeam(team.id, {
-        totalResponseTime: team.totalResponseTime,
-        answerCount: team.answerCount
-      });
+      team.lastActive = Date.now();
+      teamsChanged = true;
     } else {
       wrongCount++;
-      mockSync.logScore({
+      const entry = {
+        id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         teamId: team.id,
         teamName: team.teamName,
         questionId: question.id,
         pointsAwarded: 0,
         verdict: "wrong",
-        details: `Submitted "${sub.answer}". Correct was "${question.correctAnswer}".`
-      });
+        details: `Submitted "${sub.answer}". Correct was "${question.correctAnswer}".`,
+        timestamp: Date.now()
+      };
+      log.unshift(entry);
     }
   });
+
+  // Single batch persistence to prevent cloud network choking
+  if (teamsChanged) {
+    mockSync.saveTeamsDirect(teams);
+  }
+  mockSync.saveScoreLogDirect(log);
 
   return { correctCount, wrongCount, total: submissions.length };
 }
